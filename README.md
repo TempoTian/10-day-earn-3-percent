@@ -42,6 +42,7 @@ cd 10-day-earn-3-percent
 
 # Install dependencies
 pip install -r requirements.txt
+pip install --upgrade yfinance
 ```
 
 ### 2. **Run the AI**
