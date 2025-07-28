@@ -47,8 +47,14 @@ pip install --upgrade yfinance
 
 ### 2. **Run the AI**
 
+Run with Prompts:
 ```bash
-python main.py
+python3 main.py
+```
+
+Run example code:
+```bash
+python3 examples/basic_usage.py
 ```
 
 ### 3. **Choose Analysis Type**
