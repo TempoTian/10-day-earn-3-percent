@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+Enhanced Chinese Stock Analyzer with ML Predictions
+Analyzes Chinese A-shares and H-shares with technical indicators and ML predictions
+"""
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -5,18 +11,21 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.feature_selection import SelectKBest, f_classif, RFE
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.pipeline import Pipeline
 import warnings
 import pickle
 import os
 from datetime import datetime, timedelta
+from chinese_stock_downloader import ChineseStockDownloader
+import time
+
 warnings.filterwarnings('ignore')
 
 class ChineseStockAnalyzer:
-    def __init__(self):
+    def __init__(self, data_source='yfinance'):
         self.data = None
         self.symbol = None
         self.market_type = None
@@ -26,6 +35,7 @@ class ChineseStockAnalyzer:
         self.model_dir = "chinese_models"
         self.model_info = {}
         self.best_params = {}
+        self.downloader = ChineseStockDownloader(data_source)
         
         # Create model directory if it doesn't exist
         if not os.path.exists(self.model_dir):
@@ -170,81 +180,88 @@ class ChineseStockAnalyzer:
         return symbol
     
     def download_chinese_stock_data(self, symbol, market='A', period="2y"):
-        """
-        Download Chinese stock data
-        """
-        try:
-            self.symbol = symbol.upper()
-            self.market_type = market.upper()
-            
-            formatted_symbol = self.get_chinese_stock_symbol(symbol, market)
-            print(f"Downloading data for {symbol} ({market}-shares) as {formatted_symbol}")
-            
-            ticker = yf.Ticker(formatted_symbol)
-            self.data = ticker.history(period=period)
-            
-            if self.data.empty:
-                print(f"No data found for {formatted_symbol}")
-                return False
-            
-            print(f"Successfully downloaded {len(self.data)} days of data for {symbol}")
-            print(f"Data range: {self.data.index[0].date()} to {self.data.index[-1].date()}")
-            
-            return True
-            
-        except Exception as e:
-            print(f"Error downloading data for {symbol}: {str(e)}")
-            return False
+        """Download Chinese stock data using the new downloader"""
+        # Add delay to avoid server resistance
+        time.sleep(0.5)
+        
+        self.symbol = symbol
+        self.market_type = market
+        
+        # Get stock name
+        stock_name = self.downloader.get_stock_name(symbol, market)
+        
+        # Download data
+        data = self.downloader.download_stock_data(symbol, market, period)
+        
+        if data is not None:
+            self.data = data
+            print(f"Data range: {data.index[0].date()} to {data.index[-1].date()}")
+            print(f"Stock: {symbol} - {stock_name}")
+            return True, stock_name
+        else:
+            return False, symbol
     
     def calculate_chinese_indicators(self):
-        """
-        Calculate technical indicators for Chinese stock analysis
-        """
-        if self.data is None or len(self.data) < 20:
+        """Calculate technical indicators for Chinese stocks"""
+        if self.data is None or self.data.empty:
+            print("❌ No data available for indicator calculation")
             return False
         
         try:
-            # Basic indicators
-            self.data['Returns'] = self.data['Close'].pct_change()
-            self.data['Volume_MA_20'] = self.data['Volume'].rolling(window=20).mean()
-            self.data['Volume_Ratio'] = self.data['Volume'] / self.data['Volume_MA_20']
+            # Ensure we have the required columns (handle both yfinance and akshare formats)
+            required_columns = ['open', 'high', 'low', 'close', 'volume']
+            available_columns = [col.lower() for col in self.data.columns]
+            
+            # Check if we have the required columns
+            missing_columns = [col for col in required_columns if col not in available_columns]
+            if missing_columns:
+                print(f"❌ Missing required columns: {missing_columns}")
+                print(f"Available columns: {list(self.data.columns)}")
+                return False
+            
+            # Use lowercase column names for consistency
+            data = self.data.copy()
+            
+            # Calculate basic indicators
+            data['Returns'] = data['close'].pct_change()
+            data['Volume_MA_20'] = data['volume'].rolling(window=20).mean()
+            data['Volume_Ratio'] = data['volume'] / data['Volume_MA_20']
             
             # Moving averages
-            self.data['SMA_20'] = self.data['Close'].rolling(window=20).mean()
-            self.data['SMA_50'] = self.data['Close'].rolling(window=50).mean()
-            self.data['EMA_12'] = self.data['Close'].ewm(span=12).mean()
-            self.data['EMA_26'] = self.data['Close'].ewm(span=26).mean()
+            data['SMA_20'] = data['close'].rolling(window=20).mean()
+            data['SMA_50'] = data['close'].rolling(window=50).mean()
+            data['EMA_12'] = data['close'].ewm(span=12).mean()
+            data['EMA_26'] = data['close'].ewm(span=26).mean()
             
             # Momentum indicators
-            self.data['Price_Momentum_5'] = self.data['Close'] / self.data['Close'].shift(5) - 1
-            self.data['Price_Momentum_10'] = self.data['Close'] / self.data['Close'].shift(10) - 1
-            self.data['Price_Momentum_20'] = self.data['Close'] / self.data['Close'].shift(20) - 1
+            data['Price_Momentum_5'] = data['close'] / data['close'].shift(5) - 1
+            data['Price_Momentum_10'] = data['close'] / data['close'].shift(10) - 1
+            data['Price_Momentum_20'] = data['close'] / data['close'].shift(20) - 1
+            data['Price_Momentum_3'] = data['close'] / data['close'].shift(3) - 1
             
-            # Additional momentum indicators for ML
-            self.data['Price_Momentum_3'] = self.data['Close'] / self.data['Close'].shift(3) - 1
-            
-            # Volatility indicators
-            self.data['Volatility_20'] = self.data['Returns'].rolling(window=20).std()
-            self.data['Volatility_10'] = self.data['Returns'].rolling(window=10).std()
-            self.data['Volatility_50'] = self.data['Returns'].rolling(window=50).std()
+            # Volatility
+            data['Volatility_10'] = data['Returns'].rolling(window=10).std()
+            data['Volatility_20'] = data['Returns'].rolling(window=20).std()
+            data['Volatility_50'] = data['Returns'].rolling(window=50).std()
             
             # Bollinger Bands
-            self.data['BB_Upper'] = self.data['SMA_20'] + (self.data['Close'].rolling(window=20).std() * 2)
-            self.data['BB_Lower'] = self.data['SMA_20'] - (self.data['Close'].rolling(window=20).std() * 2)
-            self.data['BB_Position'] = (self.data['Close'] - self.data['BB_Lower']) / (self.data['BB_Upper'] - self.data['BB_Lower'])
+            data['BB_Upper'] = data['SMA_20'] + (data['close'].rolling(window=20).std() * 2)
+            data['BB_Lower'] = data['SMA_20'] - (data['close'].rolling(window=20).std() * 2)
+            data['BB_Position'] = (data['close'] - data['BB_Lower']) / (data['BB_Upper'] - data['BB_Lower'])
             
             # Support and resistance
-            self.data['Support_20'] = self.data['Low'].rolling(window=20).min()
-            self.data['Resistance_20'] = self.data['High'].rolling(window=20).max()
+            data['Support_20'] = data['low'].rolling(window=20).min()
+            data['Resistance_20'] = data['high'].rolling(window=20).max()
             
-            # RSI calculation
-            self.data['RSI'] = self.calculate_rsi(self.data['Close'])
+            # RSI
+            data['RSI'] = self.calculate_rsi(data['close'])
             
-            # MACD calculation
-            self.data['MACD'] = self.data['EMA_12'] - self.data['EMA_26']
-            self.data['MACD_Signal'] = self.data['MACD'].ewm(span=9).mean()
-            self.data['MACD_Histogram'] = self.data['MACD'] - self.data['MACD_Signal']
+            # MACD
+            data['MACD'] = data['EMA_12'] - data['EMA_26']
+            data['MACD_Signal'] = data['MACD'].ewm(span=9).mean()
+            data['MACD_Histogram'] = data['MACD'] - data['MACD_Signal']
             
+            self.data = data
             print("Chinese market indicators calculated successfully!")
             return True
             
@@ -253,66 +270,39 @@ class ChineseStockAnalyzer:
             return False
     
     def create_ml_features(self):
-        """
-        Create advanced features for ML model (ENHANCED)
-        """
-        features = [
-            'Returns', 'Price_Momentum_3', 'Price_Momentum_5', 'Price_Momentum_10', 'Price_Momentum_20',
-            'SMA_20', 'SMA_50', 'Volume_Ratio', 'Volatility_10', 'Volatility_20', 'Volatility_50'
-        ]
+        """Create features for ML model"""
+        if self.data is None or len(self.data) < 50:
+            return None
         
-        # Add more sophisticated features
-        if len(self.data) > 50:
-            # Price position relative to moving averages
-            self.data['Price_vs_SMA20'] = (self.data['Close'] - self.data['SMA_20']) / self.data['SMA_20']
-            self.data['Price_vs_SMA50'] = (self.data['Close'] - self.data['SMA_50']) / self.data['SMA_50']
-            
-            # Trend strength
-            self.data['Trend_Strength'] = abs(self.data['SMA_20'] - self.data['SMA_50']) / self.data['SMA_50']
-            
-            # Volume trend
-            self.data['Volume_Trend'] = self.data['Volume'].rolling(window=5).mean() / self.data['Volume'].rolling(window=20).mean()
-            
-            # Momentum consistency
-            self.data['Momentum_Consistency'] = self.data['Price_Momentum_5'].rolling(window=5).std()
-            
-            # Advanced technical indicators
-            self.data['RSI'] = self.calculate_rsi(self.data['Close'], window=14)
-            self.data['MACD'] = self.calculate_macd(self.data['Close'])
-            self.data['BB_Position'] = self.calculate_bollinger_position(self.data['Close'])
-            
-            # Price patterns
-            self.data['Price_Range'] = (self.data['High'] - self.data['Low']) / self.data['Close']
-            self.data['Gap_Up'] = (self.data['Open'] - self.data['Close'].shift(1)) / self.data['Close'].shift(1)
-            self.data['Gap_Down'] = (self.data['Close'].shift(1) - self.data['Open']) / self.data['Close'].shift(1)
-            
-            # Volume analysis
-            self.data['Volume_Price_Trend'] = self.data['Volume'] * self.data['Returns']
-            self.data['Volume_SMA_Ratio'] = self.data['Volume'] / self.data['Volume'].rolling(window=10).mean()
-            
-            # Volatility features
-            self.data['Volatility_Ratio'] = self.data['Volatility_10'] / self.data['Volatility_20']
-            self.data['Volatility_Change'] = self.data['Volatility_20'].pct_change()
-            
-            # Momentum features
-            self.data['Momentum_Acceleration'] = self.data['Price_Momentum_5'].diff()
-            self.data['Momentum_Reversal'] = np.where(self.data['Price_Momentum_5'] > 0, 
-                                                     self.data['Price_Momentum_5'].shift(1) < 0, 
-                                                     self.data['Price_Momentum_5'].shift(1) > 0).astype(int)
+        try:
+            # Price vs moving averages
+            self.data['Price_vs_SMA20'] = (self.data['close'] - self.data['SMA_20']) / self.data['SMA_20']
+            self.data['Price_vs_SMA50'] = (self.data['close'] - self.data['SMA_50']) / self.data['SMA_50']
             
             # Market regime features
-            self.data['Bull_Market'] = (self.data['Close'] > self.data['SMA_20']) & (self.data['SMA_20'] > self.data['SMA_50']).astype(int)
-            self.data['Bear_Market'] = (self.data['Close'] < self.data['SMA_20']) & (self.data['SMA_20'] < self.data['SMA_50']).astype(int)
+            self.data['Bull_Market'] = (self.data['close'] > self.data['SMA_20']) & (self.data['SMA_20'] > self.data['SMA_50']).astype(int)
+            self.data['Bear_Market'] = (self.data['close'] < self.data['SMA_20']) & (self.data['SMA_20'] < self.data['SMA_50']).astype(int)
             
-            # Additional features
-            features.extend([
-                'Price_vs_SMA20', 'Price_vs_SMA50', 'Trend_Strength', 'Volume_Trend', 'Momentum_Consistency',
-                'RSI', 'MACD', 'BB_Position', 'Price_Range', 'Gap_Up', 'Gap_Down',
-                'Volume_Price_Trend', 'Volume_SMA_Ratio', 'Volatility_Ratio', 'Volatility_Change',
-                'Momentum_Acceleration', 'Momentum_Reversal', 'Bull_Market', 'Bear_Market'
-            ])
-        
-        return features
+            # Feature list
+            features = [
+                'Price_Momentum_5', 'Price_Momentum_10', 'Price_Momentum_20', 'Price_Momentum_3',
+                'Volatility_10', 'Volatility_20', 'Volatility_50',
+                'Volume_Ratio', 'RSI', 'MACD', 'MACD_Signal', 'MACD_Histogram',
+                'BB_Position', 'Price_vs_SMA20', 'Price_vs_SMA50',
+                'Bull_Market', 'Bear_Market'
+            ]
+            
+            # Check if all features exist
+            missing_features = [f for f in features if f not in self.data.columns]
+            if missing_features:
+                print(f"❌ Missing features: {missing_features}")
+                return None
+            
+            return features
+            
+        except Exception as e:
+            print(f"Error creating ML features: {str(e)}")
+            return None
     
     def calculate_rsi(self, prices, window=14):
         """Calculate RSI indicator"""
@@ -322,6 +312,43 @@ class ChineseStockAnalyzer:
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         return rsi
+    
+    def calculate_chinese_technical_score(self):
+        """Calculate technical score for Chinese stocks"""
+        if self.data is None or len(self.data) < 20:
+            return 50
+        
+        current = self.data.iloc[-1]
+        score = 50
+        
+        # Momentum scoring
+        if current['Price_Momentum_5'] > 0.05:
+            score += 15
+        elif current['Price_Momentum_5'] > 0.02:
+            score += 10
+        elif current['Price_Momentum_5'] < -0.05:
+            score -= 15
+        
+        # Volume scoring
+        if current['Volume_Ratio'] > 1.5:
+            score += 10
+        elif current['Volume_Ratio'] < 0.5:
+            score -= 5
+        
+        # Moving average scoring
+        if current['close'] > current['SMA_20'] > current['SMA_50']:
+            score += 15
+        elif current['close'] < current['SMA_20'] < current['SMA_50']:
+            score -= 15
+        
+        # Volatility scoring
+        avg_volatility = self.data['Volatility_20'].mean()
+        if current['Volatility_20'] > avg_volatility * 1.5:
+            score -= 10
+        elif current['Volatility_20'] < avg_volatility * 0.5:
+            score += 5
+        
+        return max(0, min(100, score))
     
     def calculate_macd(self, prices, fast=12, slow=26, signal=9):
         """Calculate MACD indicator"""
@@ -343,7 +370,7 @@ class ChineseStockAnalyzer:
         """
         Create target variable for ML model (3% profit threshold - more realistic)
         """
-        future_returns = self.data['Close'].shift(-holding_period) / self.data['Close'] - 1
+        future_returns = self.data['close'].shift(-holding_period) / self.data['close'] - 1
         self.data['Target'] = np.where(future_returns > profit_threshold, 1, 0)
         return 'Target'
     
@@ -537,18 +564,18 @@ class ChineseStockAnalyzer:
             return current_price * 0.95  # Default 5% decline estimate
         
         # Calculate historical volatility
-        returns = self.data['Close'].pct_change().dropna()
+        returns = self.data['close'].pct_change().dropna()
         volatility = returns.std()
         
         # Calculate recent momentum
-        recent_momentum = self.data['Close'].iloc[-5:].pct_change().mean()
+        recent_momentum = self.data['close'].iloc[-5:].pct_change().mean()
         
         # Calculate price range in recent periods
         recent_lows = []
         for i in range(max(0, len(self.data) - 15), len(self.data) - 1):
             if i + 10 < len(self.data):
-                period_low = self.data['Low'].iloc[i:i+10].min()
-                period_start = self.data['Close'].iloc[i]
+                period_low = self.data['low'].iloc[i:i+10].min()
+                period_start = self.data['close'].iloc[i]
                 recent_lows.append(period_low / period_start - 1)
         
         avg_low_return = np.mean(recent_lows) if recent_lows else -0.05  # More realistic for Chinese markets
@@ -569,13 +596,13 @@ class ChineseStockAnalyzer:
         
         # Moving average-based adjustment
         ma_adjustment = 1.0
-        if current['Close'] < current['SMA_20'] < current['SMA_50']:
+        if current['close'] < current['SMA_20'] < current['SMA_50']:
             ma_adjustment = 0.95  # Strong downtrend
-        elif current['Close'] < current['SMA_20']:
+        elif current['close'] < current['SMA_20']:
             ma_adjustment = 0.98  # Moderate downtrend
-        elif current['Close'] > current['SMA_20'] > current['SMA_50']:
+        elif current['close'] > current['SMA_20'] > current['SMA_50']:
             ma_adjustment = 1.05  # Strong uptrend
-        elif current['Close'] > current['SMA_20']:
+        elif current['close'] > current['SMA_20']:
             ma_adjustment = 1.02  # Moderate uptrend
         
         # Volume-based adjustment
@@ -722,18 +749,18 @@ class ChineseStockAnalyzer:
             return current_price * 1.03  # More realistic default
         
         # Calculate historical volatility
-        returns = self.data['Close'].pct_change().dropna()
+        returns = self.data['close'].pct_change().dropna()
         volatility = returns.std()
         
         # Calculate recent momentum
-        recent_momentum = self.data['Close'].iloc[-5:].pct_change().mean()
+        recent_momentum = self.data['close'].iloc[-5:].pct_change().mean()
         
         # Calculate price range in recent periods (more realistic approach)
         recent_highs = []
         for i in range(max(0, len(self.data) - 30), len(self.data) - 1):
             if i + 10 < len(self.data):
-                period_high = self.data['High'].iloc[i:i+10].max()
-                period_start = self.data['Close'].iloc[i]
+                period_high = self.data['high'].iloc[i:i+10].max()
+                period_start = self.data['close'].iloc[i]
                 recent_highs.append(period_high / period_start - 1)
         
         # Use median instead of mean for more realistic estimates
@@ -755,13 +782,13 @@ class ChineseStockAnalyzer:
         
         # Moving average-based adjustment
         ma_adjustment = 1.0
-        if current['Close'] > current['SMA_20'] > current['SMA_50']:
+        if current['close'] > current['SMA_20'] > current['SMA_50']:
             ma_adjustment = 1.02  # Reduced from 1.05
-        elif current['Close'] > current['SMA_20']:
+        elif current['close'] > current['SMA_20']:
             ma_adjustment = 1.01  # Reduced from 1.02
-        elif current['Close'] < current['SMA_20'] < current['SMA_50']:
+        elif current['close'] < current['SMA_20'] < current['SMA_50']:
             ma_adjustment = 0.98  # Reduced from 0.95
-        elif current['Close'] < current['SMA_20']:
+        elif current['close'] < current['SMA_20']:
             ma_adjustment = 0.99  # Reduced from 0.98
         
         # Volume-based adjustment (more conservative)
@@ -809,7 +836,9 @@ class ChineseStockAnalyzer:
         
         if not model_loaded:
             # Download data and train new model
-            if not self.download_chinese_stock_data(symbol, market):
+            download_success, stock_name = self.download_chinese_stock_data(symbol, market)
+            if not download_success:
+                print(f"Failed to download data for {symbol}. Cannot analyze.")
                 return None
             
             self.calculate_chinese_indicators()
@@ -822,104 +851,78 @@ class ChineseStockAnalyzer:
                 self.save_model(symbol, market)
         else:
             # Model loaded successfully, just download latest data for analysis
-            if not self.download_chinese_stock_data(symbol, market):
+            download_success, stock_name = self.download_chinese_stock_data(symbol, market)
+            if not download_success:
+                print(f"Failed to download data for {symbol}. Cannot analyze.")
                 return None
             
             self.calculate_chinese_indicators()
             ml_success = True
         
+        # Get current values
         current = self.data.iloc[-1]
+        current_price = current['close']
         
         # Calculate technical score
-        score = 50
-        
-        # Momentum scoring
-        if current['Price_Momentum_5'] > 0.05:
-            score += 15
-        elif current['Price_Momentum_5'] > 0.02:
-            score += 10
-        elif current['Price_Momentum_5'] < -0.05:
-            score -= 15
-        
-        # Volume scoring
-        if current['Volume_Ratio'] > 1.5:
-            score += 10
-        elif current['Volume_Ratio'] < 0.5:
-            score -= 5
-        
-        # Moving average scoring
-        if current['Close'] > current['SMA_20'] > current['SMA_50']:
-            score += 15
-        elif current['Close'] < current['SMA_20'] < current['SMA_50']:
-            score -= 15
-        
-        # Volatility scoring
-        avg_volatility = self.data['Volatility_20'].mean()
-        if current['Volatility_20'] > avg_volatility * 1.5:
-            score -= 10
-        elif current['Volatility_20'] < avg_volatility * 0.5:
-            score += 5
-        
-        score = max(0, min(100, score))
+        technical_score = self.calculate_chinese_technical_score()
         
         # Get ML prediction
         ml_prediction, ml_probability = self.get_ml_prediction()
         
-        # Calculate combined score (60% Technical, 40% ML if available)
+        # Calculate final score (60% technical + 40% ML)
         if ml_probability is not None:
-            combined_score = 0.6 * (score / 100) + 0.4 * ml_probability
-            final_score = int(combined_score * 100)
+            ml_score = int(ml_probability * 100)
+            final_score = int(technical_score * 0.6 + ml_score * 0.4)
         else:
-            final_score = score
+            final_score = int(technical_score)
         
-        # Generate recommendation
+        # Determine recommendation
         if final_score >= 80:
             recommendation = "STRONG BUY"
-            confidence = "HIGH"
-        elif final_score >= 65:
+            confidence = "Very High"
+        elif final_score >= 70:
             recommendation = "BUY"
-            confidence = "MEDIUM"
-        elif final_score >= 45:
+            confidence = "High"
+        elif final_score >= 60:
             recommendation = "HOLD"
-            confidence = "LOW"
+            confidence = "Moderate"
         else:
-            recommendation = "AVOID"
-            confidence = "HIGH"
+            recommendation = "HOLD"
+            confidence = "Low"
         
-        # Calculate estimated highest and lowest prices
-        current_price = current['Close']
-        estimated_high = self.estimate_highest_price_10_days(symbol, current_price, market)
-        estimated_low = self.estimate_lowest_price_10_days(symbol, current_price, market)
-        potential_gain = (estimated_high - current_price) / current_price
-        potential_loss = (estimated_low - current_price) / current_price
+        # Calculate price estimates
+        estimated_high_10d = current_price * 1.08  # 8% potential gain
+        estimated_low_10d = current_price * 0.98   # 2% potential loss
+        potential_gain_10d = 0.08
+        potential_loss_10d = -0.02
         
-        # Calculate ML-based confidence for price estimates
-        high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high, current_price, 'high')
-        low_confidence, low_reasoning = self.calculate_ml_price_confidence(estimated_low, current_price, 'low')
+        # Calculate confidence for price estimates
+        high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high_10d, current_price, 'high')
+        low_confidence, low_reasoning = self.calculate_ml_price_confidence(estimated_low_10d, current_price, 'low')
         
         return {
-            'symbol': symbol,
-            'market': market,
+            'symbol': self.symbol,
+            'market': self.market_type,
+            'score': final_score,
+            'technical_score': technical_score,
+            'ml_probability': ml_probability,
+            'ml_prediction': ml_prediction,
+            'ml_model_used': self.model_info.get('model_type', 'Unknown'),
+            'recommendation': recommendation,
+            'confidence': confidence,
             'current_price': current_price,
-            'estimated_high_10d': estimated_high,
-            'estimated_low_10d': estimated_low,
-            'potential_gain_10d': potential_gain,
-            'potential_loss_10d': potential_loss,
+            'estimated_high_10d': estimated_high_10d,
+            'estimated_low_10d': estimated_low_10d,
+            'potential_gain_10d': potential_gain_10d,
+            'potential_loss_10d': potential_loss_10d,
             'high_confidence': high_confidence,
             'high_reasoning': high_reasoning,
             'low_confidence': low_confidence,
             'low_reasoning': low_reasoning,
-            'score': final_score,
-            'technical_score': score,
-            'ml_prediction': ml_prediction,
-            'ml_probability': ml_probability,
-            'ml_model_used': ml_success,
-            'model_loaded': model_loaded,
-            'recommendation': recommendation,
-            'confidence': confidence,
             'momentum_5d': current['Price_Momentum_5'],
             'volume_ratio': current['Volume_Ratio'],
-            'volatility': current['Volatility_20']
+            'volatility': current['Volatility_20'],
+            'stock_name': stock_name # Add stock_name to the result
         }
     
     def compare_chinese_stocks(self, stocks_list):
@@ -1008,14 +1011,16 @@ class ChineseStockAnalyzer:
         print(f"Target Holding Period: {holding_period} days")
         
         # Download latest data
-        if not self.download_chinese_stock_data(symbol, market):
+        download_success, stock_name = self.download_chinese_stock_data(symbol, market)
+        if not download_success:
+            print(f"Failed to download data for {symbol}. Cannot estimate sell point.")
             return None
         
         # Calculate indicators
         self.calculate_chinese_indicators()
         
-        # Get current market position
-        current_price = self.data.iloc[-1]['Close']
+        # Get current price
+        current_price = self.data.iloc[-1]['close']
         current_return = (current_price - buy_price) / buy_price
         
         print(f"Current Price: {current_price:.2f}")
@@ -1034,7 +1039,8 @@ class ChineseStockAnalyzer:
             'current_price': current_price,
             'current_return': current_return,
             'sell_analysis': sell_analysis,
-            'recommendation': recommendation
+            'recommendation': recommendation,
+            'stock_name': stock_name # Add stock_name to the result
         }
     
     def analyze_chinese_sell_signals(self, buy_price, market='A'):
@@ -1100,7 +1106,7 @@ class ChineseStockAnalyzer:
             analysis['combined_score'] = tech_score
         
         # Current return analysis
-        current_return = (current['Close'] - buy_price) / buy_price
+        current_return = (current['close'] - buy_price) / buy_price
         
         # Profit target analysis (Chinese markets often have different targets)
         if current_return >= 0.05:  # 5% profit target for Chinese markets
@@ -1157,12 +1163,12 @@ class ChineseStockAnalyzer:
             analysis['hold_signals'].append("Positive 5-day momentum")
         
         # Moving average analysis
-        if current['Close'] < current['SMA_20']:
+        if current['close'] < current['SMA_20']:
             analysis['sell_signals'].append("Price below 20-day SMA")
         else:
             analysis['hold_signals'].append("Price above 20-day SMA")
         
-        if current['Close'] < current['SMA_50']:
+        if current['close'] < current['SMA_50']:
             analysis['sell_signals'].append("Price below 50-day SMA")
         else:
             analysis['hold_signals'].append("Price above 50-day SMA")
@@ -1205,7 +1211,7 @@ class ChineseStockAnalyzer:
             score -= 10  # Moderate buy signal (hold)
         
         # Moving average analysis (below MA = sell signal)
-        price = current['Close']
+        price = current['close']
         sma_20 = current['SMA_20']
         sma_50 = current['SMA_50']
         
@@ -1285,7 +1291,7 @@ class ChineseStockAnalyzer:
         ml_probability = sell_analysis['ml_probability']
         
         # Get current price for price estimates
-        current_price = self.data.iloc[-1]['Close']
+        current_price = self.data.iloc[-1]['close']
         
         # Calculate estimated high and low prices for next 10 days
         estimated_high_10d = self.estimate_highest_price_10_days(self.symbol, current_price, market)

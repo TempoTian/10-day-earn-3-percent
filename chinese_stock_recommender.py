@@ -16,13 +16,15 @@ import time
 from datetime import datetime, timedelta
 from chinese_stock_cache import ChineseStockCache
 from chinese_stock_analyzer import ChineseStockAnalyzer
+from chinese_stock_downloader import ChineseStockDownloader
 
 warnings.filterwarnings('ignore')
 
 class ChineseStockRecommender:
-    def __init__(self):
+    def __init__(self, data_source='yfinance'):
         self.cache = ChineseStockCache()
-        self.analyzer = ChineseStockAnalyzer()
+        self.analyzer = ChineseStockAnalyzer(data_source)
+        self.downloader = ChineseStockDownloader(data_source)
         
         # A500 typical Chinese stock symbols (major stocks) - extracted from stock_info.txt
         self.a500_symbols = [
@@ -117,6 +119,9 @@ class ChineseStockRecommender:
     
     def download_stock_data(self, symbol, market='A', period="1mo"):
         """Download stock data with cache support"""
+        # Add delay to avoid server resistance
+        time.sleep(0.3)
+        
         # Check if download failed recently
         if self.cache.is_failed_download(symbol, market):
             print(f"⏭️  Skipping {symbol} ({market}-shares) - recent download failed")
@@ -128,22 +133,16 @@ class ChineseStockRecommender:
             return cached_data
         
         try:
-            formatted_symbol = self.get_chinese_stock_symbol(symbol, market)
-            print(f"📥 Downloading {symbol} ({market}-shares) as {formatted_symbol}")
+            # Use the new downloader
+            data = self.downloader.download_stock_data(symbol, market, period)
             
-            ticker = yf.Ticker(formatted_symbol)
-            data = ticker.history(period=period)
-            
-            if data.empty:
-                print(f"❌ No data found for {formatted_symbol}")
+            if data is not None:
+                # Cache the data
+                self.cache.cache_stock_data(symbol, market, period, data)
+                return data
+            else:
                 self.cache.mark_download_failed(symbol, market, "No data available")
                 return None
-            
-            # Cache the data
-            self.cache.cache_stock_data(symbol, market, period, data)
-            print(f"✅ Downloaded {len(data)} days of data for {symbol}")
-            
-            return data
             
         except Exception as e:
             print(f"❌ Error downloading {symbol}: {str(e)}")
@@ -157,38 +156,38 @@ class ChineseStockRecommender:
         
         # Basic indicators
         data = data.copy()
-        data['Returns'] = data['Close'].pct_change()
-        data['Volume_MA_20'] = data['Volume'].rolling(window=20).mean()
-        data['Volume_Ratio'] = data['Volume'] / data['Volume_MA_20']
+        data['Returns'] = data['close'].pct_change()
+        data['Volume_MA_20'] = data['volume'].rolling(window=20).mean()
+        data['Volume_Ratio'] = data['volume'] / data['Volume_MA_20']
         
         # Moving averages
-        data['SMA_20'] = data['Close'].rolling(window=20).mean()
-        data['SMA_50'] = data['Close'].rolling(window=50).mean()
-        data['EMA_12'] = data['Close'].ewm(span=12).mean()
-        data['EMA_26'] = data['Close'].ewm(span=26).mean()
+        data['SMA_20'] = data['close'].rolling(window=20).mean()
+        data['SMA_50'] = data['close'].rolling(window=50).mean()
+        data['EMA_12'] = data['close'].ewm(span=12).mean()
+        data['EMA_26'] = data['close'].ewm(span=26).mean()
         
         # Momentum indicators
-        data['RSI'] = self.calculate_rsi(data['Close'])
+        data['RSI'] = self.calculate_rsi(data['close'])
         data['MACD'] = data['EMA_12'] - data['EMA_26']
         data['MACD_Signal'] = data['MACD'].ewm(span=9).mean()
         data['MACD_Histogram'] = data['MACD'] - data['MACD_Signal']
         
         # Price momentum
-        data['Price_Momentum_5'] = data['Close'] / data['Close'].shift(5) - 1
-        data['Price_Momentum_10'] = data['Close'] / data['Close'].shift(10) - 1
-        data['Price_Momentum_20'] = data['Close'] / data['Close'].shift(20) - 1
+        data['Price_Momentum_5'] = data['close'] / data['close'].shift(5) - 1
+        data['Price_Momentum_10'] = data['close'] / data['close'].shift(10) - 1
+        data['Price_Momentum_20'] = data['close'] / data['close'].shift(20) - 1
         
         # Volatility
         data['Volatility_20'] = data['Returns'].rolling(window=20).std()
         
         # Bollinger Bands
-        data['BB_Upper'] = data['SMA_20'] + (data['Close'].rolling(window=20).std() * 2)
-        data['BB_Lower'] = data['SMA_20'] - (data['Close'].rolling(window=20).std() * 2)
-        data['BB_Position'] = (data['Close'] - data['BB_Lower']) / (data['BB_Upper'] - data['BB_Lower'])
+        data['BB_Upper'] = data['SMA_20'] + (data['close'].rolling(window=20).std() * 2)
+        data['BB_Lower'] = data['SMA_20'] - (data['close'].rolling(window=20).std() * 2)
+        data['BB_Position'] = (data['close'] - data['BB_Lower']) / (data['BB_Upper'] - data['BB_Lower'])
         
         # Support and resistance
-        data['Support_20'] = data['Low'].rolling(window=20).min()
-        data['Resistance_20'] = data['High'].rolling(window=20).max()
+        data['Support_20'] = data['low'].rolling(window=20).min()
+        data['Resistance_20'] = data['high'].rolling(window=20).max()
         
         return data
     
@@ -206,7 +205,7 @@ class ChineseStockRecommender:
         if data is None or data.empty:
             return 0, "No data available"
         
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         score = 0
         reasons = []
         
@@ -264,11 +263,11 @@ class ChineseStockRecommender:
             reasons.append("High volume ratio")
         
         # Price above moving averages
-        if data['Close'].iloc[-1] > data['SMA_20'].iloc[-1]:
+        if data['close'].iloc[-1] > data['SMA_20'].iloc[-1]:
             score += 10
             reasons.append("Price above 20-day MA")
         
-        if data['Close'].iloc[-1] > data['SMA_50'].iloc[-1]:
+        if data['close'].iloc[-1] > data['SMA_50'].iloc[-1]:
             score += 10
             reasons.append("Price above 50-day MA")
         
@@ -294,7 +293,7 @@ class ChineseStockRecommender:
         score = 0
         reasons = []
         
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         
         # Price in mid-range
         bb_position = data['BB_Position'].iloc[-1]
@@ -303,7 +302,7 @@ class ChineseStockRecommender:
             reasons.append("Price in mid-range")
         
         # Breaking out
-        if data['Close'].iloc[-1] > data['SMA_20'].iloc[-1] and data['Close'].iloc[-2] <= data['SMA_20'].iloc[-2]:
+        if data['close'].iloc[-1] > data['SMA_20'].iloc[-1] and data['close'].iloc[-2] <= data['SMA_20'].iloc[-2]:
             score += 20
             reasons.append("Breaking above 20-day MA")
         
@@ -340,7 +339,7 @@ class ChineseStockRecommender:
         score = 0
         reasons = []
         
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         
         # Price near support
         support = data['Support_20'].iloc[-1]
@@ -359,7 +358,7 @@ class ChineseStockRecommender:
             reasons.append("Volume spike")
         
         # Price below moving averages but showing momentum
-        if data['Close'].iloc[-1] < data['SMA_20'].iloc[-1] and data['Price_Momentum_5'].iloc[-1] > 0:
+        if data['close'].iloc[-1] < data['SMA_20'].iloc[-1] and data['Price_Momentum_5'].iloc[-1] > 0:
             score += 15
             reasons.append("Below MA but showing momentum")
         
@@ -385,7 +384,7 @@ class ChineseStockRecommender:
         score = 0
         reasons = []
         
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         
         # Breaking above resistance
         resistance = data['Resistance_20'].iloc[-1]
@@ -425,7 +424,7 @@ class ChineseStockRecommender:
         score = 0
         reasons = []
         
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         
         # Price below moving averages (potential value)
         if current_price < data['SMA_20'].iloc[-1] < data['SMA_50'].iloc[-1]:
@@ -484,7 +483,7 @@ class ChineseStockRecommender:
             reasons.append("High volume growth")
         
         # Price above moving averages with gap
-        current_price = data['Close'].iloc[-1]
+        current_price = data['close'].iloc[-1]
         if current_price > data['SMA_20'].iloc[-1] * 1.05:
             score += 15
             reasons.append("Price well above 20-day MA")
@@ -520,6 +519,7 @@ class ChineseStockRecommender:
                 if ml_probability is not None:
                     prediction = 'BUY' if ml_prediction == 1 else 'HOLD'
                     return {
+                        'stock_name': result.get('stock_name'),
                         'prediction': prediction,
                         'probability': ml_probability,
                         'estimated_high_10d': result.get('estimated_high_10d'),
@@ -553,6 +553,10 @@ class ChineseStockRecommender:
         for i, symbol in enumerate(self.a500_symbols, 1):
             print(f"📊 Analyzing {symbol} ({i}/{total_stocks})", end='\r')
             
+            # Add delay every 10 stocks to avoid server resistance
+            if i % 10 == 0:
+                time.sleep(1.0)
+            
             # Download 1-month data for initial screening
             data = self.download_stock_data(symbol, 'A', "1mo")
             if data is None or len(data) < 20:
@@ -574,7 +578,7 @@ class ChineseStockRecommender:
                     'market': 'A',
                     'score': score,
                     'reasons': reasons,
-                    'current_price': data['Close'].iloc[-1],
+                    'current_price': data['close'].iloc[-1],
                     'volume_ratio': data_with_indicators['Volume_Ratio'].iloc[-1],
                     'momentum_5d': data_with_indicators['Price_Momentum_5'].iloc[-1],
                     'rsi': data_with_indicators['RSI'].iloc[-1]
@@ -615,6 +619,10 @@ class ChineseStockRecommender:
         for i, stock in enumerate(top_stocks, 1):
             print(f"📊 Analyzing {stock['symbol']} ({i}/{len(top_stocks)})", end='\r')
             
+            # Add delay every 5 stocks to avoid server resistance
+            if i % 5 == 0:
+                time.sleep(0.5)
+            
             # Try ML analysis first
             ml_result = self.analyze_stock_with_ml(stock['symbol'], stock['market'])
             
@@ -637,11 +645,13 @@ class ChineseStockRecommender:
                     action = "HOLD"
                 
                 ml_success_count += 1
+                stock_name = ml_result['stock_name']
             else:
                 # Fallback to technical analysis only
                 ml_probability = 0.5
                 ml_prediction = 'HOLD'
                 final_score = stock['score']
+                stock_name = self.downloader.get_stock_name(stock['symbol'], stock['market'])
                 
                 # Determine action based on technical score only
                 if final_score >= 80:
@@ -657,6 +667,7 @@ class ChineseStockRecommender:
             recommendation = {
                 'symbol': stock['symbol'],
                 'market': stock['market'],
+                'stock_name': stock_name,
                 'final_score': round(final_score, 2),
                 'technical_score': stock['score'],
                 'ml_probability': round(ml_probability, 3),
@@ -707,7 +718,11 @@ class ChineseStockRecommender:
         print(f"{'='*80}")
         
         for i, rec in enumerate(recommendations, 1):
-            print(f"\n{i}. {rec['symbol']} ({rec['market']}-shares)")
+            stock_display = f"{rec['symbol']} ({rec['market']}-shares)"
+            if 'stock_name' in rec and rec['stock_name'] != rec['symbol']:
+                stock_display += f" - {rec['stock_name']}"
+            
+            print(f"\n{i}. {stock_display}")
             print(f"   📊 Final Score: {rec['final_score']:.2f}/100")
             print(f"   📈 Technical Score: {rec['technical_score']:.2f}/100")
             print(f"   🤖 ML Probability: {rec['ml_probability']:.3f}")

@@ -121,9 +121,10 @@ def main():
         print("8. 🤖 Model Management (NEW!)")
         print("9. 🎯 Chinese Stock Recommendations (NEW!)")
         print("10. ⚙️  Toggle Verbose Mode (Currently: {'ON' if verbose_mode else 'OFF'})")
-        print("11. ❌ Exit")
+        print("11. 🔄 Switch Data Source (Currently: yfinance)")
+        print("12. ❌ Exit")
         
-        choice = input("\nEnter your choice (1-11): ").strip()
+        choice = input("\nEnter your choice (1-12): ").strip()
         
         if choice == '1':
             print("\n🎯 Enter 3 US stock symbols for enhanced analysis:")
@@ -196,7 +197,11 @@ def main():
                 best = chinese_analyzer.compare_chinese_stocks(stocks_list)
                 
                 if best:
-                    print(f"\n🎯 FINAL CHINESE RECOMMENDATION: {best['symbol']} ({best['market']}-shares)")
+                    stock_display = f"{best['symbol']} ({best['market']}-shares)"
+                    if 'stock_name' in best and best['stock_name'] != best['symbol']:
+                        stock_display += f" - {best['stock_name']}"
+                    
+                    print(f"\n🎯 FINAL CHINESE RECOMMENDATION: {stock_display}")
                     
                     if verbose_mode:
                         print("=" * 60)
@@ -383,7 +388,11 @@ def main():
                     result = chinese_analyzer.analyze_chinese_stock(symbol, market)
                     
                     if result:
-                        print(f"\n📈 CHINESE STOCK ANALYSIS RESULTS FOR {symbol}")
+                        stock_display = f"{symbol} ({market}-shares)"
+                        if 'stock_name' in result and result['stock_name'] != symbol:
+                            stock_display += f" - {result['stock_name']}"
+                        
+                        print(f"\n📈 CHINESE STOCK ANALYSIS RESULTS FOR {stock_display}")
                         
                         if verbose_mode:
                             print("=" * 60)
@@ -593,8 +602,12 @@ def main():
                         
                         if result and result['recommendation']:
                             rec = result['recommendation']
+                            stock_display = f"{symbol} ({market}-shares)"
+                            if 'stock_name' in result and result['stock_name'] != symbol:
+                                stock_display += f" - {result['stock_name']}"
+                            
                             print(f"\n🎯 CHINESE STOCK SELL POINT ANALYSIS:")
-                            print(f"Symbol: {symbol} ({market}-shares)")
+                            print(f"Symbol: {stock_display}")
                             
                             if verbose_mode:
                                 print(f"Buy Price: {result['buy_price']:.2f}")
@@ -967,11 +980,46 @@ def main():
             print(f"   {'📊 Detailed analysis with technical indicators and ML scores' if verbose_mode else '🎯 Concise output with final decisions only'}")
             
         elif choice == '11':
+            print("\n🔄 DATA SOURCE SWITCHING")
+            print("Choose your preferred data source for Chinese stocks:")
+            print("1. yfinance - Yahoo Finance API (Global coverage, English interface)")
+            print("2. akshare - AKShare API (Chinese market focused, Chinese interface)")
+            print("3. View current data source info")
+            print("4. Back to main menu")
+            
+            ds_choice = input("\nEnter your choice (1-4): ").strip()
+            
+            if ds_choice == '1':
+                print("🔄 Switching to yfinance...")
+                chinese_analyzer = ChineseStockAnalyzer('yfinance')
+                chinese_recommender = ChineseStockRecommender('yfinance')
+                print("✅ Switched to yfinance data source")
+                
+            elif ds_choice == '2':
+                print("🔄 Switching to akshare...")
+                chinese_analyzer = ChineseStockAnalyzer('akshare')
+                chinese_recommender = ChineseStockRecommender('akshare')
+                print("✅ Switched to akshare data source")
+                
+            elif ds_choice == '3':
+                info = chinese_analyzer.downloader.get_data_source_info()
+                print(f"\n📊 CURRENT DATA SOURCE INFO:")
+                print(f"   Source: {info['source']}")
+                print(f"   Available sources: {', '.join(info['available_sources'])}")
+                print(f"   Description: {info['description'][info['source']]}")
+                
+            elif ds_choice == '4':
+                print("Returning to main menu.")
+                
+            else:
+                print("Invalid choice. Please enter 1-4.")
+            
+        elif choice == '12':
             print("Thank you for using the Enhanced Stock Analyzer!")
             break
             
         else:
-            print("Invalid choice. Please enter 1-10.")
+            print("Invalid choice. Please enter 1-12.")
 
 if __name__ == "__main__":
     try:
