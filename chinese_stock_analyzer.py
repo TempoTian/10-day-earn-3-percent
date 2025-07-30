@@ -198,34 +198,59 @@ class ChineseStockAnalyzer:
     
     def calculate_chinese_indicators(self):
         """
-        Calculate indicators for Chinese markets
+        Calculate technical indicators for Chinese stock analysis
         """
-        if self.data is None:
-            return
+        if self.data is None or len(self.data) < 20:
+            return False
         
-        # Basic indicators
-        self.data['Returns'] = self.data['Close'].pct_change()
-        self.data['Volume_MA_20'] = self.data['Volume'].rolling(window=20).mean()
-        self.data['Volume_Ratio'] = self.data['Volume'] / self.data['Volume_MA_20']
-        
-        # Moving averages
-        self.data['SMA_20'] = self.data['Close'].rolling(window=20).mean()
-        self.data['SMA_50'] = self.data['Close'].rolling(window=50).mean()
-        
-        # Chinese market specific
-        self.data['Price_Momentum_5'] = self.data['Close'] / self.data['Close'].shift(5) - 1
-        self.data['Price_Momentum_10'] = self.data['Close'] / self.data['Close'].shift(10) - 1
-        
-        # Volatility
-        self.data['Volatility_20'] = self.data['Returns'].rolling(window=20).std()
-        
-        # Additional indicators for ML model
-        self.data['Price_Momentum_3'] = self.data['Close'] / self.data['Close'].shift(3) - 1
-        self.data['Price_Momentum_20'] = self.data['Close'] / self.data['Close'].shift(20) - 1
-        self.data['Volatility_10'] = self.data['Returns'].rolling(window=10).std()
-        self.data['Volatility_50'] = self.data['Returns'].rolling(window=50).std()
-        
-        print("Chinese market indicators calculated successfully!")
+        try:
+            # Basic indicators
+            self.data['Returns'] = self.data['Close'].pct_change()
+            self.data['Volume_MA_20'] = self.data['Volume'].rolling(window=20).mean()
+            self.data['Volume_Ratio'] = self.data['Volume'] / self.data['Volume_MA_20']
+            
+            # Moving averages
+            self.data['SMA_20'] = self.data['Close'].rolling(window=20).mean()
+            self.data['SMA_50'] = self.data['Close'].rolling(window=50).mean()
+            self.data['EMA_12'] = self.data['Close'].ewm(span=12).mean()
+            self.data['EMA_26'] = self.data['Close'].ewm(span=26).mean()
+            
+            # Momentum indicators
+            self.data['Price_Momentum_5'] = self.data['Close'] / self.data['Close'].shift(5) - 1
+            self.data['Price_Momentum_10'] = self.data['Close'] / self.data['Close'].shift(10) - 1
+            self.data['Price_Momentum_20'] = self.data['Close'] / self.data['Close'].shift(20) - 1
+            
+            # Additional momentum indicators for ML
+            self.data['Price_Momentum_3'] = self.data['Close'] / self.data['Close'].shift(3) - 1
+            
+            # Volatility indicators
+            self.data['Volatility_20'] = self.data['Returns'].rolling(window=20).std()
+            self.data['Volatility_10'] = self.data['Returns'].rolling(window=10).std()
+            self.data['Volatility_50'] = self.data['Returns'].rolling(window=50).std()
+            
+            # Bollinger Bands
+            self.data['BB_Upper'] = self.data['SMA_20'] + (self.data['Close'].rolling(window=20).std() * 2)
+            self.data['BB_Lower'] = self.data['SMA_20'] - (self.data['Close'].rolling(window=20).std() * 2)
+            self.data['BB_Position'] = (self.data['Close'] - self.data['BB_Lower']) / (self.data['BB_Upper'] - self.data['BB_Lower'])
+            
+            # Support and resistance
+            self.data['Support_20'] = self.data['Low'].rolling(window=20).min()
+            self.data['Resistance_20'] = self.data['High'].rolling(window=20).max()
+            
+            # RSI calculation
+            self.data['RSI'] = self.calculate_rsi(self.data['Close'])
+            
+            # MACD calculation
+            self.data['MACD'] = self.data['EMA_12'] - self.data['EMA_26']
+            self.data['MACD_Signal'] = self.data['MACD'].ewm(span=9).mean()
+            self.data['MACD_Histogram'] = self.data['MACD'] - self.data['MACD_Signal']
+            
+            print("Chinese market indicators calculated successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Error calculating indicators: {str(e)}")
+            return False
     
     def create_ml_features(self):
         """
@@ -487,20 +512,19 @@ class ChineseStockAnalyzer:
             # Get the most recent data point
             current_features = X.iloc[-1:].values
             
-            # Check if we have valid features
-            if np.isnan(current_features).any():
-                return None, None
+            # Check if we have valid features (handle non-numeric data)
+            try:
+                current_features_numeric = current_features.astype(float)
+                if np.isnan(current_features_numeric).any():
+                    return None, None
+            except (ValueError, TypeError):
+                # If conversion fails, assume data is valid (contains boolean features)
+                pass
             
             # Use pipeline for prediction (includes scaling and feature selection)
-            try:
-                probability = self.model.predict_proba(current_features)[0][1]
-                prediction = 1 if probability > 0.30 else 0
-                return prediction, probability
-            except Exception as e:
-                # Fallback to direct prediction
-                prediction = self.model.predict(current_features)[0]
-                probability = 0.5 if prediction == 1 else 0.5
-                return prediction, probability
+            probability = self.model.predict_proba(current_features)[0][1]
+            prediction = 1 if probability > 0.30 else 0
+            return prediction, probability
             
         except Exception as e:
             return None, None
@@ -583,6 +607,112 @@ class ChineseStockAnalyzer:
         estimated_low = max(min_decline, min(adjusted_estimate, max_decline))
         
         return estimated_low
+    
+    def calculate_ml_price_confidence(self, estimated_price, current_price, direction='high'):
+        """
+        Calculate ML-based confidence for price estimates
+        Returns confidence level (0-100) and reasoning
+        """
+        if self.model is None or self.data is None:
+            return 50, "No ML model available"
+        
+        try:
+            # Get ML prediction and probability
+            ml_prediction, ml_probability = self.get_ml_prediction()
+            
+            if ml_probability is None:
+                return 50, "ML prediction not available"
+            
+            # Calculate price change percentage
+            price_change = (estimated_price - current_price) / current_price
+            
+            # Base confidence on ML probability and historical accuracy
+            base_confidence = 50
+            
+            # Adjust confidence based on ML prediction alignment
+            if direction == 'high':
+                # For high price estimate
+                if ml_prediction == 1:  # ML predicts rise
+                    if ml_probability > 0.7:
+                        base_confidence += 30  # Strong rise prediction
+                    elif ml_probability > 0.6:
+                        base_confidence += 20  # Moderate rise prediction
+                    elif ml_probability > 0.5:
+                        base_confidence += 10  # Weak rise prediction
+                else:  # ML predicts decline
+                    if ml_probability < 0.3:
+                        base_confidence -= 30  # Strong decline prediction
+                    elif ml_probability < 0.4:
+                        base_confidence -= 20  # Moderate decline prediction
+                    elif ml_probability < 0.5:
+                        base_confidence -= 10  # Weak decline prediction
+            else:
+                # For low price estimate
+                if ml_prediction == 0:  # ML predicts decline
+                    if ml_probability < 0.3:
+                        base_confidence += 30  # Strong decline prediction
+                    elif ml_probability < 0.4:
+                        base_confidence += 20  # Moderate decline prediction
+                    elif ml_probability < 0.5:
+                        base_confidence += 10  # Weak decline prediction
+                else:  # ML predicts rise
+                    if ml_probability > 0.7:
+                        base_confidence -= 30  # Strong rise prediction
+                    elif ml_probability > 0.6:
+                        base_confidence -= 20  # Moderate rise prediction
+                    elif ml_probability > 0.5:
+                        base_confidence -= 10  # Weak rise prediction
+            
+            # Adjust confidence based on historical model accuracy
+            if 'test_score' in self.model_info:
+                model_accuracy = self.model_info['test_score']
+                accuracy_bonus = int((model_accuracy - 0.5) * 20)  # -10 to +10 based on accuracy
+                base_confidence += accuracy_bonus
+            
+            # Adjust confidence based on price change magnitude
+            if abs(price_change) > 0.1:  # >10% change
+                base_confidence -= 10  # Less confident for large changes
+            elif abs(price_change) < 0.02:  # <2% change
+                base_confidence += 10  # More confident for small changes
+            
+            # Adjust confidence based on volatility
+            current_volatility = self.data['Volatility_20'].iloc[-1]
+            avg_volatility = self.data['Volatility_20'].mean()
+            
+            if current_volatility > avg_volatility * 1.5:
+                base_confidence -= 15  # Less confident in high volatility
+            elif current_volatility < avg_volatility * 0.5:
+                base_confidence += 10  # More confident in low volatility
+            
+            # Ensure confidence is within bounds
+            confidence = max(0, min(100, base_confidence))
+            
+            # Generate reasoning
+            reasoning = []
+            if ml_prediction == 1 and direction == 'high':
+                reasoning.append(f"ML predicts rise ({ml_probability:.1%} probability)")
+            elif ml_prediction == 0 and direction == 'low':
+                reasoning.append(f"ML predicts decline ({ml_probability:.1%} probability)")
+            else:
+                reasoning.append(f"ML prediction conflicts with {direction} estimate")
+            
+            if 'test_score' in self.model_info:
+                reasoning.append(f"Model accuracy: {self.model_info['test_score']:.1%}")
+            
+            if abs(price_change) > 0.1:
+                reasoning.append("Large price change reduces confidence")
+            elif abs(price_change) < 0.02:
+                reasoning.append("Small price change increases confidence")
+            
+            if current_volatility > avg_volatility * 1.5:
+                reasoning.append("High volatility reduces confidence")
+            elif current_volatility < avg_volatility * 0.5:
+                reasoning.append("Low volatility increases confidence")
+            
+            return confidence, " | ".join(reasoning)
+            
+        except Exception as e:
+            return 50, f"Error calculating confidence: {str(e)}"
     
     def estimate_highest_price_10_days(self, symbol, current_price, market='A'):
         """
@@ -763,6 +893,10 @@ class ChineseStockAnalyzer:
         potential_gain = (estimated_high - current_price) / current_price
         potential_loss = (estimated_low - current_price) / current_price
         
+        # Calculate ML-based confidence for price estimates
+        high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high, current_price, 'high')
+        low_confidence, low_reasoning = self.calculate_ml_price_confidence(estimated_low, current_price, 'low')
+        
         return {
             'symbol': symbol,
             'market': market,
@@ -771,6 +905,10 @@ class ChineseStockAnalyzer:
             'estimated_low_10d': estimated_low,
             'potential_gain_10d': potential_gain,
             'potential_loss_10d': potential_loss,
+            'high_confidence': high_confidence,
+            'high_reasoning': high_reasoning,
+            'low_confidence': low_confidence,
+            'low_reasoning': low_reasoning,
             'score': final_score,
             'technical_score': score,
             'ml_prediction': ml_prediction,
@@ -825,8 +963,8 @@ class ChineseStockAnalyzer:
             print(f"   Estimated Low (10d): {result['estimated_low_10d']:.2f}")
             print(f"   Potential Gain: {result['potential_gain_10d']:.2%}")
             print(f"   Potential Loss: {result['potential_loss_10d']:.2%}")
-            print(f"   Score: {result['score']}/100")
-            print(f"   Technical Score: {result['technical_score']}/100")
+            print(f"   Score: {result['score']:.2f}/100")
+            print(f"   Technical Score: {result['technical_score']:.2f}/100")
             if result['ml_probability'] is not None:
                 print(f"   ML Probability: {result['ml_probability']:.3f}")
                 print(f"   ML Prediction: {result['ml_prediction']}")
@@ -846,8 +984,8 @@ class ChineseStockAnalyzer:
         print(f"Estimated Low (10d): {best['estimated_low_10d']:.2f}")
         print(f"Potential Gain: {best['potential_gain_10d']:.2%}")
         print(f"Potential Loss: {best['potential_loss_10d']:.2%}")
-        print(f"Score: {best['score']}/100")
-        print(f"Technical Score: {best['technical_score']}/100")
+        print(f"Score: {best['score']:.2f}/100")
+        print(f"Technical Score: {best['technical_score']:.2f}/100")
         if best['ml_probability'] is not None:
             print(f"ML Probability: {best['ml_probability']:.3f}")
             print(f"ML Prediction: {best['ml_prediction']}")
@@ -901,7 +1039,7 @@ class ChineseStockAnalyzer:
     
     def analyze_chinese_sell_signals(self, buy_price, market='A'):
         """
-        Analyze sell signals specific to Chinese markets
+        Analyze sell signals specific to Chinese markets with ML integration
         """
         if self.data is None or len(self.data) < 20:
             return None
@@ -909,6 +1047,10 @@ class ChineseStockAnalyzer:
         current = self.data.iloc[-1]
         analysis = {
             'technical_score': 0,
+            'ml_score': 0,
+            'combined_score': 0,
+            'ml_prediction': None,
+            'ml_probability': None,
             'sell_signals': [],
             'hold_signals': [],
             'risk_factors': [],
@@ -921,6 +1063,41 @@ class ChineseStockAnalyzer:
         # Calculate technical sell score
         tech_score = self.calculate_chinese_sell_technical_score()
         analysis['technical_score'] = tech_score
+        
+        # Try to get ML prediction
+        try:
+            # Ensure we have a model for this stock
+            if self.model is None:
+                # Try to load existing model
+                if not self.load_model(self.symbol, market):
+                    # Train new model if loading fails
+                    print(f"Training new ML model for {self.symbol}...")
+                    self.train_ml_model(holding_period=10, profit_threshold=0.03)
+            
+            # Get ML prediction
+            ml_prediction, ml_probability = self.get_ml_prediction()
+            analysis['ml_prediction'] = ml_prediction
+            analysis['ml_probability'] = ml_probability
+            
+            # Calculate ML score for sell analysis
+            if ml_probability is not None:
+                # Convert ML probability to sell score (0-100)
+                # Higher probability of price increase = lower sell score
+                ml_score = int((1 - ml_probability) * 100)
+                analysis['ml_score'] = ml_score
+                
+                # Combine technical and ML scores (70% technical, 30% ML)
+                combined_score = int(0.7 * tech_score + 0.3 * ml_score)
+                analysis['combined_score'] = combined_score
+            else:
+                # If ML not available, use technical score only
+                analysis['combined_score'] = tech_score
+                print(f"⚠️  ML prediction not available for {self.symbol}, using technical score only")
+                
+        except Exception as e:
+            print(f"⚠️  ML analysis failed for {self.symbol}: {str(e)}")
+            # Use technical score only if ML fails
+            analysis['combined_score'] = tech_score
         
         # Current return analysis
         current_return = (current['Close'] - buy_price) / buy_price
@@ -941,6 +1118,17 @@ class ChineseStockAnalyzer:
         elif current_return <= -0.02:  # 2% stop loss
             analysis['sell_signals'].append("Approaching stop loss (-2%+)")
             analysis['risk_factors'].append("Loss position")
+        
+        # ML-based signals
+        if ml_probability is not None:
+            if ml_probability < 0.3:
+                analysis['sell_signals'].append(f"ML predicts strong decline (prob: {ml_probability:.1%})")
+            elif ml_probability < 0.4:
+                analysis['sell_signals'].append(f"ML predicts moderate decline (prob: {ml_probability:.1%})")
+            elif ml_probability > 0.7:
+                analysis['hold_signals'].append(f"ML predicts strong rise (prob: {ml_probability:.1%})")
+            elif ml_probability > 0.6:
+                analysis['hold_signals'].append(f"ML predicts moderate rise (prob: {ml_probability:.1%})")
         
         # Chinese market specific analysis
         if market.upper() == 'A':
@@ -997,6 +1185,7 @@ class ChineseStockAnalyzer:
     def calculate_chinese_sell_technical_score(self):
         """
         Calculate technical score for Chinese stock sell decision (0-100)
+        Higher score = stronger sell signal
         """
         if self.data is None or len(self.data) < 20:
             return 50
@@ -1004,66 +1193,135 @@ class ChineseStockAnalyzer:
         current = self.data.iloc[-1]
         score = 50  # Neutral base score
         
-        # Momentum analysis
-        if current['Price_Momentum_5'] < -0.05:
-            score += 20  # Strong sell signal
-        elif current['Price_Momentum_5'] < -0.02:
-            score += 10  # Moderate sell signal
-        elif current['Price_Momentum_5'] > 0.05:
-            score -= 20  # Strong buy signal (hold)
-        elif current['Price_Momentum_5'] > 0.02:
+        # Momentum analysis (negative momentum = sell signal)
+        momentum_5 = current['Price_Momentum_5']
+        if momentum_5 < -0.05:
+            score += 25  # Strong sell signal
+        elif momentum_5 < -0.02:
+            score += 15  # Moderate sell signal
+        elif momentum_5 > 0.05:
+            score -= 20  # Strong buy signal (hold) - but don't go below 0
+        elif momentum_5 > 0.02:
             score -= 10  # Moderate buy signal (hold)
         
-        # Moving average analysis
-        if current['Close'] < current['SMA_20']:
+        # Moving average analysis (below MA = sell signal)
+        price = current['Close']
+        sma_20 = current['SMA_20']
+        sma_50 = current['SMA_50']
+        
+        if price < sma_20:
             score += 15  # Below short-term MA
         else:
-            score -= 15  # Above short-term MA
+            score -= 10  # Above short-term MA
         
-        if current['Close'] < current['SMA_50']:
+        if price < sma_50:
             score += 15  # Below long-term MA
         else:
-            score -= 15  # Above long-term MA
+            score -= 10  # Above long-term MA
         
-        # Volume analysis
-        if current['Volume_Ratio'] > 2.0:
-            score += 10  # High volume
-        elif current['Volume_Ratio'] < 0.5:
-            score -= 5  # Low volume
+        # Volume analysis (high volume often precedes decline)
+        volume_ratio = current['Volume_Ratio']
+        if volume_ratio > 2.0:
+            score += 15  # High volume - potential distribution
+        elif volume_ratio > 1.5:
+            score += 10  # Moderate high volume
+        elif volume_ratio < 0.5:
+            score -= 5   # Low volume - accumulation possible
         
-        # Volatility analysis
+        # Volatility analysis (high volatility = increased risk)
         avg_volatility = self.data['Volatility_20'].mean()
-        if current['Volatility_20'] > avg_volatility * 1.5:
-            score += 10  # High volatility
-        elif current['Volatility_20'] < avg_volatility * 0.5:
-            score -= 5  # Low volatility
+        current_volatility = current['Volatility_20']
+        if current_volatility > avg_volatility * 1.5:
+            score += 15  # High volatility - increased risk
+        elif current_volatility > avg_volatility * 1.2:
+            score += 10  # Moderate high volatility
+        elif current_volatility < avg_volatility * 0.5:
+            score -= 5   # Low volatility - stable conditions
         
-        return max(0, min(100, score))
+        # RSI analysis (if available)
+        if 'RSI' in current and not pd.isna(current['RSI']):
+            rsi = current['RSI']
+            if rsi > 80:
+                score += 20  # Very overbought - strong sell signal
+            elif rsi > 70:
+                score += 15  # Overbought - sell signal
+            elif rsi < 20:
+                score -= 20  # Very oversold - strong buy signal
+            elif rsi < 30:
+                score -= 15  # Oversold - buy signal
+        
+        # MACD analysis (if available)
+        if 'MACD' in current and not pd.isna(current['MACD']):
+            macd = current['MACD']
+            if macd < 0:
+                score += 10  # Negative MACD - bearish
+            else:
+                score -= 5   # Positive MACD - bullish
+        
+        # Bollinger Band analysis (if available)
+        if 'BB_Position' in current and not pd.isna(current['BB_Position']):
+            bb_pos = current['BB_Position']
+            if bb_pos > 0.8:
+                score += 10  # Near upper band - potential reversal
+            elif bb_pos < 0.2:
+                score -= 10  # Near lower band - potential bounce
+        
+        # Ensure score is within bounds (0-100)
+        score = max(0, min(100, score))
+        
+        return score
     
     def generate_chinese_sell_recommendation(self, sell_analysis, current_return, buy_price, market='A'):
         """
-        Generate sell recommendation for Chinese stocks
+        Generate sell recommendation for Chinese stocks with ML integration
         """
         if not sell_analysis:
             return None
         
+        # Use combined score (technical + ML) for recommendation
+        combined_score = sell_analysis['combined_score']
         tech_score = sell_analysis['technical_score']
+        ml_score = sell_analysis['ml_score']
+        ml_probability = sell_analysis['ml_probability']
         
-        # Determine sell action based on Chinese market characteristics
-        if tech_score >= 75:
+        # Get current price for price estimates
+        current_price = self.data.iloc[-1]['Close']
+        
+        # Calculate estimated high and low prices for next 10 days
+        estimated_high_10d = self.estimate_highest_price_10_days(self.symbol, current_price, market)
+        estimated_low_10d = self.estimate_lowest_price_10_days(self.symbol, current_price, market)
+        
+        # Calculate potential gains and losses
+        potential_gain_10d = (estimated_high_10d - current_price) / current_price
+        potential_loss_10d = (estimated_low_10d - current_price) / current_price
+        
+        # Calculate ML-based confidence for price estimates
+        high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high_10d, current_price, 'high')
+        low_confidence, low_reasoning = self.calculate_ml_price_confidence(estimated_low_10d, current_price, 'low')
+        
+        # Determine sell action based on combined score
+        if combined_score >= 80:
             action = "SELL NOW"
-            urgency = "HIGH"
-            reasoning = "Strong technical signals indicate selling"
-        elif tech_score >= 60:
+            urgency = "VERY HIGH"
+            reasoning = "Very strong technical and ML signals indicate immediate selling"
+        elif combined_score >= 70:
             action = "SELL SOON"
+            urgency = "HIGH"
+            reasoning = "Strong technical and ML signals indicate selling within 1-2 days"
+        elif combined_score >= 60:
+            action = "SELL"
             urgency = "MEDIUM"
-            reasoning = "Moderate sell signals detected"
-        elif tech_score >= 40:
+            reasoning = "Moderate sell signals detected - consider selling this week"
+        elif combined_score >= 45:
             action = "HOLD"
             urgency = "LOW"
-            reasoning = "Mixed signals - consider holding"
-        else:
+            reasoning = "Mixed signals - monitor closely but no immediate action needed"
+        elif combined_score >= 30:
             action = "HOLD/ADD"
+            urgency = "LOW"
+            reasoning = "Weak buy signals - consider holding or adding small positions"
+        else:
+            action = "BUY/ADD"
             urgency = "LOW"
             reasoning = "Strong buy signals - consider adding to position"
         
@@ -1078,8 +1336,8 @@ class ChineseStockAnalyzer:
             # At stop loss, suggest immediate selling
             target_price = current_return * buy_price
         else:
-            # Calculate based on technical analysis
-            if tech_score >= 60:
+            # Calculate based on combined analysis
+            if combined_score >= 60:
                 target_price = buy_price * (1 + max(current_return, 0.01))
             else:
                 target_price = buy_price * 1.03
@@ -1087,17 +1345,58 @@ class ChineseStockAnalyzer:
         # Risk assessment for Chinese markets
         risk_level = "LOW"
         if sell_analysis['stop_loss_triggered']:
-            risk_level = "HIGH"
+            risk_level = "VERY HIGH"
         elif sell_analysis['limit_up_near']:
             risk_level = "HIGH"
         elif len(sell_analysis['risk_factors']) > 2:
             risk_level = "MEDIUM"
+        elif combined_score >= 70:
+            risk_level = "HIGH"
+        elif combined_score >= 60:
+            risk_level = "MEDIUM"
+        
+        # Add score interpretation with ML insights
+        score_interpretation = ""
+        if combined_score >= 80:
+            score_interpretation = "Very Strong Sell Signal"
+        elif combined_score >= 70:
+            score_interpretation = "Strong Sell Signal"
+        elif combined_score >= 60:
+            score_interpretation = "Moderate Sell Signal"
+        elif combined_score >= 45:
+            score_interpretation = "Neutral Signal"
+        elif combined_score >= 30:
+            score_interpretation = "Weak Buy Signal"
+        else:
+            score_interpretation = "Strong Buy Signal"
+        
+        # Add ML insights
+        ml_insights = ""
+        if ml_probability is not None:
+            if ml_probability < 0.3:
+                ml_insights = f"ML strongly predicts decline ({ml_probability:.1%} probability of rise)"
+            elif ml_probability < 0.4:
+                ml_insights = f"ML moderately predicts decline ({ml_probability:.1%} probability of rise)"
+            elif ml_probability > 0.7:
+                ml_insights = f"ML strongly predicts rise ({ml_probability:.1%} probability of rise)"
+            elif ml_probability > 0.6:
+                ml_insights = f"ML moderately predicts rise ({ml_probability:.1%} probability of rise)"
+            else:
+                ml_insights = f"ML neutral ({ml_probability:.1%} probability of rise)"
+        else:
+            ml_insights = "ML prediction not available"
         
         return {
             'action': action,
             'urgency': urgency,
             'reasoning': reasoning,
             'technical_score': tech_score,
+            'ml_score': ml_score,
+            'combined_score': combined_score,
+            'ml_probability': ml_probability,
+            'ml_prediction': sell_analysis['ml_prediction'],
+            'score_interpretation': score_interpretation,
+            'ml_insights': ml_insights,
             'target_price': target_price,
             'risk_level': risk_level,
             'sell_signals': sell_analysis['sell_signals'],
@@ -1105,5 +1404,13 @@ class ChineseStockAnalyzer:
             'risk_factors': sell_analysis['risk_factors'],
             'profit_potential': sell_analysis['profit_potential'],
             'limit_up_near': sell_analysis['limit_up_near'],
-            'limit_down_near': sell_analysis['limit_down_near']
+            'limit_down_near': sell_analysis['limit_down_near'],
+            'estimated_high_10d': estimated_high_10d,
+            'estimated_low_10d': estimated_low_10d,
+            'potential_gain_10d': potential_gain_10d,
+            'potential_loss_10d': potential_loss_10d,
+            'high_confidence': high_confidence,
+            'high_reasoning': high_reasoning,
+            'low_confidence': low_confidence,
+            'low_reasoning': low_reasoning
         } 
