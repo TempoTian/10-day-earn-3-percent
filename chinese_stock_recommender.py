@@ -1241,276 +1241,140 @@ class ChineseStockRecommender:
 
     def retrain_ml_model_with_top_stocks(self, top_stocks):
         """
-        Retrain ML model with data from selected top stocks
+        Retrain the ML scoring model with the selected top stocks
         """
-        if not top_stocks:
-            print("❌ No top stocks provided for retraining")
-            return False
+        print(f"🔄 Retraining ML scoring model with selected {len(top_stocks)} stocks...")
         
-        print(f"\n🤖 RETRAINING ML MODEL WITH TOP {len(top_stocks)} STOCKS")
-        print(f"📊 Collecting training data...")
+        # Collect data for retraining
+        stock_data_dict = {}
+        technical_scores_dict = {}
+        ml_scores_dict = {}
+        actual_returns_dict = {}
         
-        # Collect 2-year data for selected stocks
-        training_data = []
-        collected_stocks = 0
-        
-        for i, stock_info in enumerate(top_stocks, 1):
-            symbol = stock_info['symbol']
-            market = stock_info.get('market', 'A')
-            
-            print(f"   📈 Processing {symbol} ({i}/{len(top_stocks)})...", end='\r')
+        for i, stock in enumerate(top_stocks, 1):
+            symbol = stock['symbol']
+            print(f"   Collecting data for {symbol} ({i}/{len(top_stocks)})...", end='\r')
             
             try:
                 # Check cache first for 2-year data
-                cached_data = self.cache.get_cached_stock_data(symbol, market, "2y")
-                
-                if cached_data is not None and len(cached_data) > 400:  # At least 2 years
-                    print(f"      ✅ Using cached 2-year data ({len(cached_data)} days)")
+                cached_data = self.cache.get_cached_stock_data(symbol, 'A', "2y")
+                if cached_data is not None and len(cached_data) >= 100:
                     data = cached_data
+                    print(f"      ✅ Using cached data for {symbol}")
                 else:
-                    print(f"      📥 Downloading 2-year data...")
-                    data = self.downloader.download_stock_data(symbol, market, "2y")
-                    
-                    if data is not None and len(data) > 400:
-                        # Cache the downloaded data
-                        self.cache.cache_stock_data(symbol, market, "2y", data)
-                        print(f"      ✅ Downloaded and cached ({len(data)} days)")
-                    else:
-                        print(f"      ⚠️  Insufficient data for {symbol}, skipping")
+                    # Download 2-year data for ML training
+                    data = self.downloader.download_stock_data(symbol, 'A', period="2y")
+                    if data is None or len(data) < 100:
                         continue
+                    
+                    # Cache the data
+                    self.cache.cache_stock_data(symbol, 'A', "2y", data)
+                    print(f"      ✅ Downloaded and cached data for {symbol}")
                 
-                # Calculate indicators
-                data_with_indicators = self.calculate_technical_indicators(data.copy())
+                # Set data in analyzer and calculate indicators
+                self.analyzer.data = data
+                indicators_calculated = self.analyzer.calculate_chinese_indicators()
                 
-                if data_with_indicators is None:
-                    print(f"      ⚠️  Failed to calculate indicators for {symbol}, skipping")
+                if not indicators_calculated:
                     continue
                 
-                # Create training data for this stock
-                stock_training_data = self.create_training_data_from_stock(
-                    data_with_indicators, symbol, market
-                )
+                # Work with a copy of the data
+                data_with_indicators = self.analyzer.data.copy()
                 
-                if stock_training_data:
-                    training_data.extend(stock_training_data)
-                    collected_stocks += 1
-                    print(f"      ✅ Added {len(stock_training_data)} training samples")
-                else:
-                    print(f"      ⚠️  No training data generated for {symbol}")
+                # Prepare for backtesting
+                technical_scores = []
+                ml_scores = []
+                actual_returns = []
+                
+                # Calculate scores for each day (skip first 30, leave 10 for return calculation)
+                for j in range(30, len(data_with_indicators) - 10):
+                    # Create a temporary analyzer with data up to current point
+                    temp_analyzer = ChineseStockAnalyzer(data_source=self.data_source)
+                    temp_analyzer.data = data_with_indicators.iloc[:j+1]
+                    
+                    # Calculate technical score
+                    tech_score = temp_analyzer.calculate_chinese_technical_score()
+                    technical_scores.append(tech_score)
+                    
+                    # Get ML score (simulate ML prediction)
+                    try:
+                        current = data_with_indicators.iloc[j]
+                        
+                        # Use available columns with fallbacks
+                        rsi = current.get('RSI', 50)
+                        momentum = current.get('Price_Momentum_5', 0)
+                        volume = current.get('Volume_Ratio', 1.0)
+                        
+                        # Simple ML-like score based on indicators
+                        ml_score = 50  # Base score
+                        if rsi > 70:
+                            ml_score += 20  # Overbought
+                        elif rsi < 30:
+                            ml_score -= 20  # Oversold
+                        
+                        if momentum > 0.02:
+                            ml_score += 15  # Strong momentum
+                        elif momentum < -0.02:
+                            ml_score -= 15  # Weak momentum
+                        
+                        if volume > 1.5:
+                            ml_score += 10  # High volume
+                        elif volume < 0.5:
+                            ml_score -= 10  # Low volume
+                        
+                        ml_score = max(0, min(100, ml_score))
+                        
+                    except Exception as e:
+                        ml_score = 50
+                    
+                    ml_scores.append(ml_score)
+                    
+                    # Calculate actual return (10-day forward return)
+                    current_price = data_with_indicators.iloc[j]['close']
+                    future_price = data_with_indicators.iloc[j+10]['close']
+                    actual_return = (future_price - current_price) / current_price
+                    actual_returns.append(actual_return)
+                
+                # Store data for this stock
+                stock_data_dict[symbol] = data_with_indicators.iloc[30:len(data_with_indicators)-10]
+                technical_scores_dict[symbol] = technical_scores
+                ml_scores_dict[symbol] = ml_scores
+                actual_returns_dict[symbol] = actual_returns
                 
             except Exception as e:
-                print(f"      ❌ Error processing {symbol}: {str(e)}")
+                print(f"      ❌ Error collecting data for {symbol}: {str(e)}")
                 continue
         
-        print(f"\n📊 Data collection completed!")
-        print(f"   ✅ Successfully processed {collected_stocks}/{len(top_stocks)} stocks")
-        print(f"   📈 Total training samples: {len(training_data)}")
+        print(f"\n   ✅ Collected data from {len(stock_data_dict)} stocks for ML training")
         
-        if len(training_data) < 100:
-            print(f"❌ Insufficient training data ({len(training_data)} samples)")
-            return False
-        
-        # Train the improved ML model
-        print(f"\n🤖 Training improved ML scoring model...")
-        success = self.ml_scoring_model.train_improved_model(training_data)
-        
-        if success:
-            print(f"✅ ML model retraining completed successfully!")
-            print(f"📊 Model trained on {len(training_data)} samples from {collected_stocks} stocks")
-            return True
-        else:
-            print(f"❌ ML model retraining failed")
-            return False
-
-    def create_training_data_from_stock(self, data_with_indicators, symbol, market):
-        """
-        Create training data from a single stock's historical data
-        """
-        if data_with_indicators is None or len(data_with_indicators) < 50:
-            return None
-        
-        training_samples = []
-        
-        try:
-            # Calculate scores for each day (skip first 30, leave 10 for return calculation)
-            for j in range(30, len(data_with_indicators) - 10):
-                current = data_with_indicators.iloc[j]
+        # Retrain the ML model with collected data
+        if len(stock_data_dict) > 0:
+            training_data = self.ml_scoring_model.create_enhanced_training_data(
+                stock_data_dict, technical_scores_dict, ml_scores_dict, actual_returns_dict
+            )
+            
+            print(f"   📊 Total training samples: {len(training_data)}")
+            
+            if len(training_data) > 100:
+                model_trained = self.ml_scoring_model.train_improved_model(training_data)
                 
-                # Calculate technical score for this point
-                tech_score = self.calculate_technical_score_for_point(data_with_indicators, j)
-                
-                # Calculate ML-like score based on indicators
-                ml_score = self.calculate_ml_like_score_for_point(current)
-                
-                # Calculate actual return (10-day forward return)
-                current_price = data_with_indicators.iloc[j]['close']
-                future_price = data_with_indicators.iloc[j+10]['close']
-                actual_return = (future_price - current_price) / current_price
-                
-                # Convert return to target score
-                target_score = self._enhanced_return_to_score(actual_return)
-                
-                # Create market features
-                market_features = {
-                    'stock_price_level': self._normalize_price_level(current_price),
-                    'stock_volume_level': self._normalize_volume_level(current.get('Volume_Ratio', 1.0)),
-                    'volatility': current.get('Volatility_20', 0.02),
-                    'momentum': current.get('Price_Momentum_5', 0),
-                    'macd': current.get('MACD', 0),
-                    'rsi': current.get('RSI', 50),
-                    'bollinger_position': current.get('BB_Position', 0.5),
-                    'symbol_hash': hash(symbol) % 1000  # Simple hash for symbol
-                }
-                
-                # Create training sample
-                sample = {
-                    'technical_score': tech_score,
-                    'ml_score': ml_score,
-                    'target_score': target_score,
-                    'actual_return': actual_return,
-                    **market_features
-                }
-                
-                training_samples.append(sample)
-            
-            return training_samples
-            
-        except Exception as e:
-            print(f"      ❌ Error creating training data for {symbol}: {str(e)}")
-            return None
-    
-    def calculate_technical_score_for_point(self, data, index):
-        """
-        Calculate technical score for a specific point in time
-        """
-        try:
-            current = data.iloc[index]
-            
-            score = 50  # Base score
-            
-            # Momentum scoring
-            momentum_5 = current.get('Price_Momentum_5', 0)
-            if momentum_5 > 0.05:
-                score += 15
-            elif momentum_5 > 0.02:
-                score += 10
-            elif momentum_5 < -0.05:
-                score -= 15
-            
-            # Volume scoring
-            volume_ratio = current.get('Volume_Ratio', 1.0)
-            if volume_ratio > 1.5:
-                score += 10
-            elif volume_ratio < 0.5:
-                score -= 5
-            
-            # Moving average scoring
-            close = current['close']
-            sma_20 = current.get('SMA_20', close)
-            sma_50 = current.get('SMA_50', close)
-            
-            if close > sma_20 > sma_50:
-                score += 15
-            elif close < sma_20 < sma_50:
-                score -= 15
-            
-            # RSI scoring
-            rsi = current.get('RSI', 50)
-            if rsi > 70:
-                score -= 10
-            elif rsi < 30:
-                score += 10
-            
-            return max(0, min(100, score))
-            
-        except Exception as e:
-            return 50  # Default score on error
-    
-    def calculate_ml_like_score_for_point(self, current):
-        """
-        Calculate ML-like score based on technical indicators
-        """
-        try:
-            score = 50  # Base score
-            
-            # RSI-based adjustment
-            rsi = current.get('RSI', 50)
-            if rsi > 70:
-                score -= 20  # Overbought
-            elif rsi > 60:
-                score -= 10
-            elif rsi < 30:
-                score += 20  # Oversold
-            elif rsi < 40:
-                score += 10
-            
-            # Momentum-based adjustment
-            momentum = current.get('Price_Momentum_5', 0)
-            if momentum > 0.05:
-                score += 15
-            elif momentum > 0.02:
-                score += 10
-            elif momentum < -0.05:
-                score -= 15
-            elif momentum < -0.02:
-                score -= 10
-            
-            # Volume-based adjustment
-            volume_ratio = current.get('Volume_Ratio', 1.0)
-            if volume_ratio > 1.5:
-                score += 10
-            elif volume_ratio < 0.5:
-                score -= 5
-            
-            # MACD-based adjustment
-            macd = current.get('MACD', 0)
-            if macd > 0:
-                score += 5
+                if model_trained:
+                    print(f"   ✅ ML model retrained successfully!")
+                    print(f"   📊 New reliability score: {self.ml_scoring_model.get_reliability_score():.1%}")
+                    
+                    # Save the retrained model
+                    self.ml_scoring_model.save_model()
+                    self._model_retrained = True # Set flag for retrained model
+                    return True
+                else:
+                    print(f"   ⚠️  Failed to retrain ML model, using existing model")
+                    self._model_retrained = False # Set flag for existing model
+                    return False
             else:
-                score -= 5
-            
-            return max(0, min(100, score))
-            
-        except Exception as e:
-            return 50  # Default score on error
-    
-    def _enhanced_return_to_score(self, return_value):
-        """
-        Convert return value to target score (0-100)
-        """
-        if return_value >= 0.08:  # 8%+ gain
-            return 90 + min(10, (return_value - 0.08) * 100)  # 90-100 for 8%+ gains
-        elif return_value >= 0.05:  # 5-8% gain
-            return 80 + (return_value - 0.05) * 333  # 80-90 for 5-8% gains
-        elif return_value >= 0.03:  # 3-5% gain
-            return 70 + (return_value - 0.03) * 500  # 70-80 for 3-5% gains
-        elif return_value >= 0.01:  # 1-3% gain
-            return 60 + (return_value - 0.01) * 500  # 60-70 for 1-3% gains
-        elif return_value >= -0.01:  # -1% to 1%
-            return 50 + return_value * 500  # 45-55 for -1% to 1%
-        elif return_value >= -0.03:  # -3% to -1%
-            return 40 + (return_value + 0.03) * 500  # 40-45 for -3% to -1%
-        elif return_value >= -0.05:  # -5% to -3%
-            return 20 + (return_value + 0.05) * 1000  # 20-40 for -5% to -3%
-        else:  # -5% and below
-            return max(0, 5 + (return_value + 0.05) * 100)  # 0-5 for -5%+ losses
-    
-    def _normalize_price_level(self, price):
-        """
-        Normalize price level to 0-1 range
-        """
-        # Simple normalization based on typical Chinese stock price ranges
-        if price <= 10:
-            return price / 10
-        elif price <= 50:
-            return 1.0 + (price - 10) / 40
-        elif price <= 100:
-            return 2.0 + (price - 50) / 50
+                print(f"   ⚠️  Insufficient training data ({len(training_data)} samples), using existing model")
+                self._model_retrained = False # Set flag for existing model
+                return False
         else:
-            return 3.0 + min(2.0, (price - 100) / 100)
-    
-    def _normalize_volume_level(self, volume_ratio):
-        """
-        Normalize volume ratio to 0-1 range
-        """
-        return min(1.0, max(0.0, volume_ratio / 3.0))
+            print(f"   ⚠️  No data collected for training, using existing model")
+            self._model_retrained = False # Set flag for existing model
+            return False

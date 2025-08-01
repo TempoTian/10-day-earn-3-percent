@@ -132,141 +132,84 @@ class ImprovedMLScoringModel:
         else:  # -5%+ loss
             return max(0, 5 + (return_value + 0.05) * 100)  # 0-5 for -5%+ losses
     
-    def train_improved_model(self, training_data, validation_split=0.2):
+    def train_improved_model(self, training_data):
         """
-        Train the improved ML scoring model with progress indicators
+        Train improved ML scoring model with better validation
         """
-        if training_data is None or len(training_data) == 0:
-            print("❌ No training data available")
+        if not training_data:
+            print("❌ No training data provided")
             return False
         
-        try:
-            print(f"🤖 Training improved ML scoring model with {len(training_data)} samples")
-            print(f"📊 Data preparation in progress...")
-            
-            # Prepare features and targets
-            X = []
-            y = []
-            
-            print(f"🔄 Processing training samples...")
-            for i, sample in enumerate(training_data):
-                if i % 1000 == 0:  # Show progress every 1000 samples
-                    print(f"   📈 Processed {i}/{len(training_data)} samples ({i/len(training_data)*100:.1f}%)")
-                
-                features = [
-                    sample['technical_score'],
-                    sample['ml_score'],
-                    sample['stock_price_level'],
-                    sample['stock_volume_level'],
-                    sample['volatility'],
-                    sample['momentum'],
-                    sample['macd'],
-                    sample['rsi'],
-                    sample['bollinger_position'],
-                    sample['symbol_hash']
-                ]
-                X.append(features)
-                y.append(sample['target_score'])
-            
-            print(f"✅ Data processing completed!")
-            
-            X = np.array(X)
-            y = np.array(y)
-            
-            print(f"📊 Dataset shape: X={X.shape}, y={y.shape}")
-            print(f"📈 Target score range: {y.min():.1f} - {y.max():.1f}")
-            print(f"📊 Mean target score: {y.mean():.1f}")
-            
-            # Split data
-            print(f"🔄 Splitting data into training and validation sets...")
-            split_idx = int(len(X) * (1 - validation_split))
-            X_train, X_val = X[:split_idx], X[split_idx:]
-            y_train, y_val = y[:split_idx], y[split_idx:]
-            
-            print(f"📊 Training set: {len(X_train)} samples")
-            print(f"📊 Validation set: {len(X_val)} samples")
-            
-            # Initialize model
-            print(f"🤖 Initializing GradientBoostingRegressor...")
-            self.model = GradientBoostingRegressor(
-                n_estimators=200,
-                learning_rate=0.1,
-                max_depth=6,
-                min_samples_split=20,
-                min_samples_leaf=10,
-                subsample=0.8,
-                random_state=42,
-                verbose=0  # Disable internal verbose to avoid spam
-            )
-            
-            # Train model with progress
-            print(f"🚀 Starting model training...")
-            print(f"   📈 This may take several minutes for {len(X_train)} samples")
-            
-            # Use TimeSeriesSplit for validation during training
-            from sklearn.model_selection import TimeSeriesSplit
-            tscv = TimeSeriesSplit(n_splits=5)
-            
-            # Train with cross-validation progress
-            print(f"🔄 Training with 5-fold time series cross-validation...")
-            cv_scores = []
-            
-            for fold, (train_idx, val_idx) in enumerate(tscv.split(X_train), 1):
-                print(f"   📊 Fold {fold}/5: Training on {len(train_idx)} samples, validating on {len(val_idx)} samples")
-                
-                X_fold_train, X_fold_val = X_train[train_idx], X_train[val_idx]
-                y_fold_train, y_fold_val = y_train[train_idx], y_train[val_idx]
-                
-                # Train on this fold
-                self.model.fit(X_fold_train, y_fold_train)
-                
-                # Evaluate
-                y_fold_pred = self.model.predict(X_fold_val)
-                fold_score = np.mean(np.abs(y_fold_pred - y_fold_val))  # MAE
-                cv_scores.append(fold_score)
-                
-                print(f"      ✅ Fold {fold} MAE: {fold_score:.2f}")
-            
-            # Final training on full training set
-            print(f"🔄 Final training on complete training set...")
-            self.model.fit(X_train, y_train)
-            
-            # Evaluate on validation set
-            print(f"📊 Evaluating on validation set...")
-            y_val_pred = self.model.predict(X_val)
-            val_mae = np.mean(np.abs(y_val_pred - y_val))
-            val_rmse = np.sqrt(np.mean((y_val_pred - y_val) ** 2))
-            
-            # Calculate R-squared
-            from sklearn.metrics import r2_score
-            val_r2 = r2_score(y_val, y_val_pred)
-            
-            print(f"✅ Training completed!")
-            print(f"📊 Validation Results:")
-            print(f"   MAE: {val_mae:.2f}")
-            print(f"   RMSE: {val_rmse:.2f}")
-            print(f"   R²: {val_r2:.3f}")
-            print(f"   Cross-validation MAE: {np.mean(cv_scores):.2f} (±{np.std(cv_scores):.2f})")
-            
-            # Store model info
-            self.model_info = {
-                'training_samples': len(training_data),
-                'validation_mae': val_mae,
-                'validation_rmse': val_rmse,
-                'validation_r2': val_r2,
-                'cv_mae_mean': np.mean(cv_scores),
-                'cv_mae_std': np.std(cv_scores),
-                'last_trained': datetime.now().isoformat(),
-                'model_type': 'GradientBoostingRegressor'
-            }
-            
-            self.is_trained = True
-            print(f"🎯 Model training successful! Ready for predictions.")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error training improved model: {str(e)}")
-            return False
+        print(f"🤖 Training improved ML scoring model with {len(training_data)} samples...")
+        
+        # Prepare features and targets
+        X = []
+        y = []
+        
+        feature_names = [
+            'technical_score', 'ml_score', 'price_momentum_5', 'price_momentum_10', 'price_momentum_20',
+            'volume_ratio', 'volume_ma_20', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
+            'bollinger_position', 'volatility_10', 'volatility_20', 'volatility_50',
+            'sma_20', 'sma_50', 'ema_12', 'ema_26', 'support_20', 'resistance_20',
+            'price_vs_sma20', 'price_vs_sma50', 'stock_price_level', 'stock_volume_level', 'symbol_hash'
+        ]
+        
+        for sample in training_data:
+            features = sample['features']
+            X.append([features.get(name, 0) for name in feature_names])
+            y.append(sample['target'])
+        
+        X = np.array(X)
+        y = np.array(y)
+        
+        # Time series split for better validation
+        tscv = TimeSeriesSplit(n_splits=5)
+        
+        # Use Gradient Boosting for better performance
+        self.model = GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.1,
+            max_depth=8,
+            min_samples_split=10,
+            min_samples_leaf=5,
+            subsample=0.8,
+            random_state=42
+        )
+        
+        # Scale features
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Train model
+        self.model.fit(X_scaled, y)
+        
+        # Enhanced validation
+        cv_scores = cross_val_score(self.model, X_scaled, y, cv=tscv, scoring='r2')
+        y_pred = self.model.predict(X_scaled)
+        
+        mse = mean_squared_error(y, y_pred)
+        mae = mean_absolute_error(y, y_pred)
+        r2 = r2_score(y, y_pred)
+        
+        print(f"✅ Improved model trained successfully!")
+        print(f"   📊 R² Score: {r2:.3f}")
+        print(f"   📊 Mean Squared Error: {mse:.3f}")
+        print(f"   📊 Mean Absolute Error: {mae:.3f}")
+        print(f"   📊 Cross-validation R²: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
+        
+        # Calculate reliability score
+        self.reliability_score = max(0, min(1, (r2 + 1) / 2))  # Convert to 0-1 scale
+        
+        if self.reliability_score > 0.6:
+            print(f"   ✅ Model reliability: {self.reliability_score:.1%} (GOOD)")
+        elif self.reliability_score > 0.4:
+            print(f"   ⚠️  Model reliability: {self.reliability_score:.1%} (MODERATE)")
+        else:
+            print(f"   ❌ Model reliability: {self.reliability_score:.1%} (POOR)")
+        
+        self.is_trained = True
+        self.training_data = training_data
+        
+        return True
     
     def predict_improved_score(self, technical_score, ml_score, market_features=None, symbol=None):
         """
@@ -276,46 +219,54 @@ class ImprovedMLScoringModel:
             print("⚠️  Model not trained, using fallback calculation")
             return self._enhanced_fallback_score(technical_score, ml_score)
         
-        try:
-            # Prepare features - use only the 10 features that were used during training
-            features = [
-                technical_score,
-                ml_score,
-                market_features.get('stock_price_level', 100) if market_features else 100,
-                market_features.get('stock_volume_level', 1.0) if market_features else 1.0,
-                market_features.get('volatility', 0.02) if market_features else 0.02,
-                market_features.get('momentum', 0) if market_features else 0,
-                market_features.get('macd', 0) if market_features else 0,
-                market_features.get('rsi', 50) if market_features else 50,
-                market_features.get('bollinger_position', 0.5) if market_features else 0.5,
-                hash(symbol) % 1000 if symbol else 0
-            ]
-            
-            # Predict score
-            predicted_score = self.model.predict([features])[0]
-            
-            # Conservative bounds checking with fallback to technical score if prediction is unrealistic
-            if predicted_score < 0 or predicted_score > 100:
-                print(f"⚠️  ML prediction out of bounds ({predicted_score:.1f}), using conservative fallback")
-                # Use a conservative blend of technical and ML scores
-                conservative_score = technical_score * 0.7 + ml_score * 0.3
-                return max(0, min(100, int(conservative_score)))
-            
-            # Additional sanity check: if prediction is too far from technical score, use conservative approach
-            score_diff = abs(predicted_score - technical_score)
-            if score_diff > 30:  # If ML prediction differs by more than 30 points from technical
-                print(f"⚠️  Large score difference detected (ML: {predicted_score:.1f}, Tech: {technical_score}), using conservative blend")
-                # Use weighted average with more weight on technical score
-                conservative_score = technical_score * 0.8 + predicted_score * 0.2
-                return max(0, min(100, int(conservative_score)))
-            
-            # Ensure score is within 0-100 range and return as integer
-            final_score = max(0, min(100, predicted_score))
-            return int(final_score)
-            
-        except Exception as e:
-            print(f"⚠️  Error in ML prediction: {str(e)}, using fallback")
-            return self._enhanced_fallback_score(technical_score, ml_score)
+        # Prepare features
+        if market_features is None:
+            market_features = {
+                'price_momentum_5': 0, 'price_momentum_10': 0, 'price_momentum_20': 0,
+                'volume_ratio': 1.0, 'volume_ma_20': 1000000,
+                'rsi': 50, 'macd': 0, 'macd_signal': 0, 'macd_histogram': 0,
+                'bollinger_position': 0.5, 'volatility_10': 0.02, 'volatility_20': 0.02, 'volatility_50': 0.02,
+                'sma_20': 100, 'sma_50': 100, 'ema_12': 100, 'ema_26': 100,
+                'support_20': 90, 'resistance_20': 110,
+                'price_vs_sma20': 0, 'price_vs_sma50': 0,
+                'stock_price_level': 100, 'stock_volume_level': 1000000,
+                'symbol_hash': hash(symbol) % 1000 if symbol else 0
+            }
+        
+        feature_names = [
+            'technical_score', 'ml_score', 'price_momentum_5', 'price_momentum_10', 'price_momentum_20',
+            'volume_ratio', 'volume_ma_20', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
+            'bollinger_position', 'volatility_10', 'volatility_20', 'volatility_50',
+            'sma_20', 'sma_50', 'ema_12', 'ema_26', 'support_20', 'resistance_20',
+            'price_vs_sma20', 'price_vs_sma50', 'stock_price_level', 'stock_volume_level', 'symbol_hash'
+        ]
+        
+        features = [technical_score, ml_score] + [market_features.get(name, 0) for name in feature_names[2:]]
+        
+        # Scale features
+        features_scaled = self.scaler.transform([features])
+        
+        # Predict score
+        predicted_score = self.model.predict(features_scaled)[0]
+        
+        # Conservative bounds checking with fallback to technical score if prediction is unrealistic
+        if predicted_score < 0 or predicted_score > 100:
+            print(f"⚠️  ML prediction out of bounds ({predicted_score:.1f}), using conservative fallback")
+            # Use a conservative blend of technical and ML scores
+            conservative_score = technical_score * 0.7 + ml_score * 0.3
+            return max(0, min(100, int(conservative_score)))
+        
+        # Additional sanity check: if prediction is too far from technical score, use conservative approach
+        score_diff = abs(predicted_score - technical_score)
+        if score_diff > 30:  # If ML prediction differs by more than 30 points from technical
+            print(f"⚠️  Large score difference detected (ML: {predicted_score:.1f}, Tech: {technical_score}), using conservative blend")
+            # Use weighted average with more weight on technical score
+            conservative_score = technical_score * 0.8 + predicted_score * 0.2
+            return max(0, min(100, int(conservative_score)))
+        
+        # Ensure score is within 0-100 range and return as integer
+        final_score = max(0, min(100, predicted_score))
+        return int(final_score)
     
     def _enhanced_fallback_score(self, technical_score, ml_score):
         """

@@ -257,3 +257,4 @@ class ChineseStockCache:
         except Exception as e:
             print(f"❌ Error clearing cache: {e}")
             return False
+ 

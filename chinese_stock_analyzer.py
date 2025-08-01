@@ -319,7 +319,7 @@ class ChineseStockAnalyzer:
             if missing_features:
                 print(f"❌ Missing features: {missing_features}")
                 return None
-            
+        
             return features
             
         except Exception as e:
@@ -416,11 +416,10 @@ class ChineseStockAnalyzer:
         Train advanced machine learning model for Chinese stocks (ENHANCED)
         """
         try:
-            print(f"🔄 Preparing ML training data...")
             X, y = self.prepare_ml_data(holding_period, profit_threshold)
             
             if len(X) < 100:
-                print("❌ Insufficient data for ML model training")
+                print("Insufficient data for ML model training")
                 return False
             
             # Check class balance
@@ -428,31 +427,22 @@ class ChineseStockAnalyzer:
             print(f"📊 Class Balance: {class_counts.to_dict()}")
             print(f"📊 Positive Class Ratio: {class_counts.get(1, 0) / len(y):.3f}")
             
-            print(f"🔄 Splitting data into training and test sets...")
             # Use stratified split to maintain class balance
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42, stratify=y
             )
             
-            print(f"📊 Training set: {len(X_train)} samples")
-            print(f"📊 Test set: {len(X_test)} samples")
-            
             # Create advanced pipeline with feature selection
-            print(f"🤖 Creating advanced ML pipeline...")
             self.model = self.create_advanced_pipeline()
             
             # Train the pipeline
-            print(f"🚀 Training advanced ML model...")
-            print(f"   📈 This may take a few minutes for {len(X_train)} samples")
             self.model.fit(X_train, y_train)
             
             # Evaluate model
-            print(f"📊 Evaluating model performance...")
             train_score = self.model.score(X_train, y_train)
             test_score = self.model.score(X_test, y_test)
             
             # Cross-validation score with stratified folds
-            print(f"🔄 Running 5-fold cross-validation...")
             cv_scores = cross_val_score(self.model, X_train, y_train, cv=5, scoring='accuracy')
             cv_mean = cv_scores.mean()
             cv_std = cv_scores.std()
@@ -480,20 +470,20 @@ class ChineseStockAnalyzer:
                 'model_type': 'Advanced Pipeline (Feature Selection + Ensemble)'
             }
             
-            print(f"✅ ML Model Training Results:")
-            print(f"   Training Accuracy: {train_score:.3f}")
-            print(f"   Test Accuracy: {test_score:.3f}")
-            print(f"   Cross-Validation: {cv_mean:.3f} (+/- {cv_std*2:.3f})")
-            print(f"   Features Used: {len(X.columns)}")
-            print(f"   Data Points: {len(X)}")
-            print(f"   Model Type: Advanced Pipeline (Feature Selection + Ensemble)")
+            print(f"🚀 ADVANCED ML Model Training Results:")
+            print(f"Training Accuracy: {train_score:.3f}")
+            print(f"Test Accuracy: {test_score:.3f}")
+            print(f"Cross-Validation: {cv_mean:.3f} (+/- {cv_std*2:.3f})")
+            print(f"Features Used: {len(X.columns)}")
+            print(f"Data Points: {len(X)}")
+            print(f"Model Type: Advanced Pipeline (Feature Selection + Ensemble)")
             
             # Use more realistic threshold for model acceptance
             self.ml_model_used = test_score > 0.65 and cv_mean > 0.55
             return self.ml_model_used
             
         except Exception as e:
-            print(f"❌ Error in ML model training: {str(e)}")
+            print(f"Error in ML model training: {str(e)}")
             return False
     
     def create_advanced_pipeline(self):
@@ -563,6 +553,9 @@ class ChineseStockAnalyzer:
         
         try:
             features = self.create_ml_features()
+            if features is None:
+                return None, None
+                
             X = self.data[features].dropna()
             
             if len(X) == 0:
@@ -586,6 +579,7 @@ class ChineseStockAnalyzer:
             return prediction, probability
             
         except Exception as e:
+            print(f"⚠️  ML prediction error: {str(e)}")
             return None, None
     
     def estimate_lowest_price_10_days(self, symbol, current_price, market='A'):
@@ -893,11 +887,11 @@ class ChineseStockAnalyzer:
             if not download_success:
                 print(f"Failed to download data for {symbol}. Cannot analyze.")
                 return None
-        
+            
         # Calculate indicators if not already calculated
         if not data_already_available or 'Price_Momentum_5' not in self.data.columns:
             self.calculate_chinese_indicators()
-        
+            
         # PHASE 1: INITIAL ANALYSIS with existing model or fallback
         print(f"\n🔍 PHASE 1: INITIAL ANALYSIS")
         pre_result = self._generate_pre_output(stock_name, model_loaded)
@@ -956,14 +950,19 @@ class ChineseStockAnalyzer:
             # Get current values
             current = self.data.iloc[-1]
             current_price = current['close']
-            
-            # Calculate technical score
+        
+        # Calculate technical score
             technical_score = self.calculate_chinese_technical_score()
             
             # Get ML prediction using existing model or fallback
             if model_loaded and self.model is not None:
                 ml_prediction, ml_probability = self.get_ml_prediction()
-                ml_model_used = self.model_info.get('model_type', 'Existing Model')
+                if ml_prediction is None or ml_probability is None:
+                    # Use fallback ML calculation
+                    ml_prediction, ml_probability = self._calculate_fallback_ml()
+                    ml_model_used = 'Fallback ML (Technical + Market Conditions)'
+                else:
+                    ml_model_used = self.model_info.get('model_type', 'Existing Model')
             else:
                 # Use fallback ML calculation
                 ml_prediction, ml_probability = self._calculate_fallback_ml()
@@ -1047,12 +1046,17 @@ class ChineseStockAnalyzer:
             # Get ML prediction using retrained model
             if ml_success and self.model is not None:
                 ml_prediction, ml_probability = self.get_ml_prediction()
-                ml_model_used = self.model_info.get('model_type', 'Retrained Model')
+                if ml_prediction is None or ml_probability is None:
+                    # Use fallback if prediction fails
+                    ml_prediction, ml_probability = self._calculate_fallback_ml()
+                    ml_model_used = 'Fallback ML (Technical + Market Conditions)'
+                else:
+                    ml_model_used = self.model_info.get('model_type', 'Retrained Model')
             else:
                 # Use fallback if retraining failed
                 ml_prediction, ml_probability = self._calculate_fallback_ml()
                 ml_model_used = 'Fallback ML (Technical + Market Conditions)'
-            
+        
             # Calculate final score (60% technical + 40% ML)
             if ml_probability is not None:
                 ml_score = int(ml_probability * 100)
@@ -1060,7 +1064,7 @@ class ChineseStockAnalyzer:
             else:
                 ml_score = 0
                 final_score = int(technical_score)
-            
+        
             # Determine recommendation
             if final_score >= 80:
                 recommendation = "STRONG BUY"
@@ -1084,7 +1088,7 @@ class ChineseStockAnalyzer:
             # Calculate confidence for price estimates
             high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high_10d, current_price, 'high')
             low_confidence, low_reasoning = self.calculate_ml_price_confidence(estimated_low_10d, current_price, 'low')
-            
+        
             return {
                 'symbol': self.symbol,
                 'market': self.market_type,
