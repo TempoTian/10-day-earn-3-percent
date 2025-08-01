@@ -120,11 +120,12 @@ def main():
         print("7. 📈 View detailed backtest results")
         print("8. 🤖 Model Management (NEW!)")
         print("9. 🎯 Chinese Stock Recommendations (NEW!)")
-        print("10. ⚙️  Toggle Verbose Mode (Currently: {'ON' if verbose_mode else 'OFF'})")
-        print("11. 🔄 Switch Data Source (Currently: yfinance)")
-        print("12. ❌ Exit")
+        print("10. 🇨🇳 Single Chinese Stock Analysis (NEW!)")
+        print("11. ⚙️  Toggle Verbose Mode (Currently: {'ON' if verbose_mode else 'OFF'})")
+        print("12. 🔄 Switch Data Source (Currently: yfinance)")
+        print("13. ❌ Exit")
         
-        choice = input("\nEnter your choice (1-12): ").strip()
+        choice = input("\nEnter your choice (1-13): ").strip()
         
         if choice == '1':
             print("\n🎯 Enter 3 US stock symbols for enhanced analysis:")
@@ -620,7 +621,7 @@ def main():
                                 print(f"Technical Score: {rec['technical_score']:.1f}/100")
                                 print(f"ML Probability: {rec['ml_probability']:.3f}")
                                 print(f"ML Prediction: {rec['ml_prediction']}")
-                                print(f"ML Score: {rec['ml_score']:.2f}/100")
+                                print(f"Sell Signal Strength: {rec['ml_score']:.2f}/100 (ML-based)")
                                 print(f"Combined Score: {rec['combined_score']:.2f}/100")
                                 print(f"ML Insights: {rec.get('ml_insights', 'Not available')}")
                                 
@@ -661,6 +662,7 @@ def main():
                                 print(f"💡 Action: {rec['action']} | Urgency: {rec['urgency']}")
                                 print(f"🎯 Target: {rec['target_price']:.2f} | Risk: {rec['risk_level']}")
                                 print(f"📊 Technical Score: {rec['technical_score']:.2f}/100")
+                                print(f"🤖 Sell Signal Strength: {rec['ml_score']:.2f}/100")
                                 
                                 # Quick action summary
                                 if rec['action'] == "SELL NOW":
@@ -874,112 +876,122 @@ def main():
                 print("Invalid choice. Please enter 1-4.")
                 
         elif choice == '9':
-            print("\n🎯 Chinese Stock Recommendations (A500 Analysis):")
-            print("Analyze top Chinese A500 stocks using multiple strategies and ML predictions")
-            print("1. All strategies")
-            print("2. 强中选强 (Strong Among Strong)")
-            print("3. 中位破局 (Mid-range Breakout)")
-            print("4. 低位反弹 (Low Position Rebound)")
-            print("5. 技术突破 (Technical Breakout)")
-            print("6. 价值回归 (Value Reversion)")
-            print("7. 成长加速 (Growth Acceleration)")
-            print("8. View cache statistics")
-            print("9. Clear cache")
-            print("10. Exit")
+            print(f"\n🎯 Chinese Stock Recommendation System")
+            print(f"Available Strategies:")
+            print(f"1. All strategies")
+            print(f"2. 强中选强 (Strong Among Strong)")
+            print(f"3. 中位破局 (Mid-range Breakout)")
+            print(f"4. 低位反弹 (Low Position Rebound)")
+            print(f"5. 技术突破 (Technical Breakout)")
+            print(f"6. 价值回归 (Value Reversion)")
+            print(f"7. 成长加速 (Growth Acceleration)")
             
-            strategy_choice = input("\nEnter your choice (1-10): ").strip()
+            strategy_choice = input(f"\nSelect strategy (1-7): ").strip()
             
             if strategy_choice in ['1', '2', '3', '4', '5', '6', '7']:
-                print(f"\n🚀 Starting Chinese Stock Recommendation Analysis...")
-                print(f"📊 Strategy: {chinese_recommender.strategies[strategy_choice]['name']}")
-                print(f"📝 Description: {chinese_recommender.strategies[strategy_choice]['description']}")
-                print(f"🎯 Total stocks to analyze: {len(chinese_recommender.a500_symbols)}")
-                print(f"⏳ This may take 3-5 minutes for comprehensive analysis...")
-                
-                # Ask if user wants fresh analysis
-                fresh_choice = input("\n🔄 Force fresh analysis (ignore cache)? (y/n): ").strip().lower()
-                if fresh_choice == 'y':
-                    print("🗑️  Clearing cache for fresh analysis...")
-                    chinese_recommender.cache.clear_all_cache()
-                    print("✅ Cache cleared, starting fresh analysis...")
-                
                 try:
-                    recommendations = chinese_recommender.run_recommendation_analysis(strategy_choice)
+                    # Use the new recommend method
+                    recommendations = chinese_recommender.recommend(strategy_choice, top_n=5)
                     
                     if recommendations:
-                        print(f"\n✅ Analysis completed successfully!")
-                        print(f"📊 Found {len(recommendations)} top recommendations")
-                        print(f"🎯 Analyzed all {len(chinese_recommender.a500_symbols)} stocks")
-                        
-                        # Ask if user wants to save results
-                        save_choice = input("\n💾 Save recommendations to file? (y/n): ").strip().lower()
-                        if save_choice == 'y':
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            filename = f"chinese_recommendations_{strategy_choice}_{timestamp}.txt"
-                            
-                            with open(filename, 'w', encoding='utf-8') as f:
-                                f.write(f"Chinese Stock Recommendations - {chinese_recommender.strategies[strategy_choice]['name']}\n")
-                                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                                f.write(f"Strategy: {chinese_recommender.strategies[strategy_choice]['description']}\n")
-                                f.write(f"Total stocks analyzed: {len(chinese_recommender.a500_symbols)}\n")
-                                f.write("="*80 + "\n\n")
-                                
-                                for i, rec in enumerate(recommendations, 1):
-                                    f.write(f"{i}. {rec['symbol']} ({rec['market']}-shares)\n")
-                                    f.write(f"   Final Score: {rec['final_score']:.2f}/100\n")
-                                    f.write(f"   Technical Score: {rec['technical_score']:.2f}/100\n")
-                                    f.write(f"   ML Probability: {rec['ml_probability']:.3f}\n")
-                                    f.write(f"   ML Prediction: {rec['ml_prediction']}\n")
-                                    f.write(f"   Action: {rec['action']}\n")
-                                    f.write(f"   Current Price: ¥{rec['current_price']:.2f}\n")
-                                    f.write(f"   Volume Ratio: {rec['volume_ratio']:.2f}\n")
-                                    f.write(f"   5-day Momentum: {rec['momentum_5d']:.2%}\n")
-                                    f.write(f"   RSI: {rec['rsi']:.1f}\n")
-                                    f.write(f"   Key Strengths: {', '.join(rec['reasons'][:3])}\n")
-                                    f.write("-"*60 + "\n\n")
-                            
-                            print(f"✅ Recommendations saved to {filename}")
+                        print(f"\n✅ Recommendation analysis completed successfully!")
+                        print(f"📊 Generated {len(recommendations)} recommendations")
                     else:
-                        print("❌ No recommendations found. Try a different strategy or check market conditions.")
+                        print(f"\n❌ No recommendations generated. Please try a different strategy.")
                         
                 except Exception as e:
-                    print(f"❌ Error during analysis: {str(e)}")
-                    print("Please try again or check your internet connection.")
-            
-            elif strategy_choice == '8':
-                stats = chinese_recommender.cache.get_cache_stats()
-                print(f"\n📊 Cache Statistics:")
-                print(f"   📈 Cached stocks: {stats['total_cached_stocks']}")
-                print(f"   ❌ Failed downloads: {stats['total_failed_downloads']}")
-                print(f"   🎯 Cached recommendations: {stats['total_cached_recommendations']}")
-                print(f"   📊 Total stocks in system: {len(chinese_recommender.a500_symbols)}")
-                
-                if stats['total_cached_recommendations'] > 0:
-                    print(f"\n💡 Cache Status: {'Using cached results' if stats['total_cached_recommendations'] > 0 else 'Fresh analysis needed'}")
-                    print(f"🔄 To force fresh analysis, choose option 9 (Clear cache)")
-                else:
-                    print(f"\n💡 Cache Status: Fresh analysis will be performed")
-            
-            elif strategy_choice == '9':
-                confirm = input("🗑️  Clear all cache? This will force fresh downloads (y/n): ").strip().lower()
-                if confirm == 'y':
-                    chinese_recommender.cache.clear_all_cache()
-                    print("✅ Cache cleared successfully")
-                else:
-                    print("Cache clearing cancelled")
-            
-            elif strategy_choice == '10':
-                print("Returning to main menu.")
-            
+                    print(f"\n❌ Error during recommendation analysis: {str(e)}")
+                    print(f"💡 Please check your internet connection and try again.")
             else:
-                print("Invalid choice. Please enter 1-10.")
+                print(f"❌ Invalid strategy choice. Please select 1-7.")
                 
         elif choice == '10':
+            print("\n🇨🇳 Single Chinese Stock Analysis")
+            print("Enter a Chinese stock symbol to analyze:")
+            print("Format: Stock code (e.g., 000001 for A-shares, 0700 for H-shares)")
+            symbol = input("Stock code: ").strip()
+            market = input("Market (A/H, default A): ").strip().upper() or 'A'
+            
+            if symbol:
+                print(f"⏳ Analyzing {symbol} ({market}-shares)...")
+                result = chinese_analyzer.analyze_chinese_stock(symbol, market)
+                
+                if result:
+                    stock_display = f"{symbol} ({market}-shares)"
+                    if 'stock_name' in result and result['stock_name'] != symbol:
+                        stock_display += f" - {result['stock_name']}"
+                    
+                    print(f"\n📈 CHINESE STOCK ANALYSIS RESULTS FOR {stock_display}")
+                    
+                    if verbose_mode:
+                        print("=" * 60)
+                        
+                        print(f"📊 SCORE ANALYSIS:")
+                        print(f"   Final Score: {result['score']:.2f}/100")
+                        print(f"   Technical Score: {result['technical_score']:.2f}/100")
+                        
+                        if result['ml_probability'] is not None:
+                            # Calculate ML score
+                            ml_score = int(result['ml_probability'] * 100)
+                            print(f"   ML Score: {ml_score}/100")
+                            print(f"   ML Probability: {result['ml_probability']:.1%}")
+                            print(f"   ML Prediction: {result['ml_prediction']}")
+                            print(f"   ML Model Used: {result['ml_model_used']}")
+                        
+                        print(f"\n💡 RECOMMENDATION:")
+                        print(f"   Action: {result['recommendation']}")
+                        print(f"   Confidence: {result['confidence']}")
+                        
+                        print(f"\n💰 PRICE ANALYSIS:")
+                        print(f"   Current Price: ¥{result['current_price']:.2f}")
+                        print(f"   Estimated High (10d): ¥{result['estimated_high_10d']:.2f}")
+                        print(f"   Estimated Low (10d): ¥{result['estimated_low_10d']:.2f}")
+                        print(f"   Potential Gain: {result['potential_gain_10d']:.1%}")
+                        print(f"   Potential Loss: {result['potential_loss_10d']:.1%}")
+                        
+                        print(f"\n📊 TECHNICAL INDICATORS:")
+                        print(f"   5-day Momentum: {result['momentum_5d']:.2%}")
+                        print(f"   Volume Ratio: {result['volume_ratio']:.2f}")
+                        print(f"   Volatility (20d): {result['volatility']:.2%}")
+                        
+                        print(f"\n🎯 CONFIDENCE ANALYSIS:")
+                        print(f"   High Price Confidence: {result['high_confidence']:.1f}%")
+                        print(f"   High Price Reasoning: {result['high_reasoning']}")
+                        print(f"   Low Price Confidence: {result['low_confidence']:.1f}%")
+                        print(f"   Low Price Reasoning: {result['low_reasoning']}")
+                        
+                    else:
+                        # Concise output
+                        print(f"📊 Score: {result['score']:.2f}/100")
+                        if result['ml_probability'] is not None:
+                            ml_score = int(result['ml_probability'] * 100)
+                            print(f"🤖 ML: {ml_score}/100 ({result['ml_probability']:.1%})")
+                        
+                        print(f"💡 {result['recommendation']} | Confidence: {result['confidence']}")
+                        print(f"💰 ¥{result['current_price']:.2f} | High: ¥{result['estimated_high_10d']:.2f} | Low: ¥{result['estimated_low_10d']:.2f}")
+                        print(f"📈 Gain: {result['potential_gain_10d']:.1%} | Loss: {result['potential_loss_10d']:.1%}")
+                        print(f"📊 Momentum: {result['momentum_5d']:.1%} | Volume: {result['volume_ratio']:.1f}x")
+                        
+                        # Quick assessment
+                        if result['score'] >= 80:
+                            print(f"✅ EXCELLENT CHOICE")
+                        elif result['score'] >= 70:
+                            print(f"✅ GOOD CHOICE")
+                        elif result['score'] >= 60:
+                            print(f"⚠️  MODERATE")
+                        else:
+                            print(f"❌ CAUTION")
+                else:
+                    print(f"❌ Analysis failed for {symbol}. Please check the symbol and try again.")
+            else:
+                print("❌ Please enter a valid stock symbol.")
+                
+        elif choice == '11':
             verbose_mode = not verbose_mode
             print(f"✅ Verbose mode {'ENABLED' if verbose_mode else 'DISABLED'}")
             print(f"   {'📊 Detailed analysis with technical indicators and ML scores' if verbose_mode else '🎯 Concise output with final decisions only'}")
             
-        elif choice == '11':
+        elif choice == '12':
             print("\n🔄 DATA SOURCE SWITCHING")
             print("Choose your preferred data source for Chinese stocks:")
             print("1. yfinance - Yahoo Finance API (Global coverage, English interface)")
@@ -1014,12 +1026,12 @@ def main():
             else:
                 print("Invalid choice. Please enter 1-4.")
             
-        elif choice == '12':
+        elif choice == '13':
             print("Thank you for using the Enhanced Stock Analyzer!")
             break
             
         else:
-            print("Invalid choice. Please enter 1-12.")
+            print("Invalid choice. Please enter 1-13.")
 
 if __name__ == "__main__":
     try:

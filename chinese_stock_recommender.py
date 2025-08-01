@@ -17,14 +17,23 @@ from datetime import datetime, timedelta
 from chinese_stock_cache import ChineseStockCache
 from chinese_stock_analyzer import ChineseStockAnalyzer
 from chinese_stock_downloader import ChineseStockDownloader
+from improved_ml_scoring import ImprovedMLScoringModel
 
 warnings.filterwarnings('ignore')
 
 class ChineseStockRecommender:
     def __init__(self, data_source='yfinance'):
-        self.cache = ChineseStockCache()
+        """
+        Initialize Chinese stock recommender
+        """
+        self.data_source = data_source
         self.analyzer = ChineseStockAnalyzer(data_source)
         self.downloader = ChineseStockDownloader(data_source)
+        self.cache = ChineseStockCache()
+        
+        # Initialize improved ML scoring model
+        self.ml_scoring_model = ImprovedMLScoringModel()
+        self.ml_scoring_model.load_model()  # Try to load existing model
         
         # A500 typical Chinese stock symbols (major stocks) - extracted from stock_info.txt
         self.a500_symbols = [
@@ -86,10 +95,11 @@ class ChineseStockRecommender:
         ]
         try:
             import akshare as ak
-            bse_stock_list_df = ak.stock_info_bj_name_code()
-            self.a500_symbols = bse_stock_list_df["证券代码"]
+           # bse_stock_list_df = ak.stock_info_bj_name_code()
+            #self.a500_symbols = bse_stock_list_df["证券代码"]
         except Exception as e:
             print(f"Failed to download stock list: {e}")
+
 
         # Remove duplicates while preserving order
         self.a500_symbols = list(dict.fromkeys(self.a500_symbols))
@@ -607,9 +617,604 @@ class ChineseStockRecommender:
         
         return top_stocks
     
-    def get_final_recommendations(self, strategy_type, top_n=5):
-        """Get final recommendations with ML analysis"""
-        print(f"\n🎯 Getting final recommendations for strategy: {self.strategies[strategy_type]['name']}")
+    def get_final_recommendations(self, top_stocks, strategy_name):
+        """
+        Get final recommendations with ML integration (using already retrained model)
+        """
+ 
+        # First, generate pre-output for all stocks with combined technical + ML scores
+        print(f"📊 STEP 1: PRELIMINARY ANALYSIS FOR ALL TOP STOCKS")
+        pre_output_results = self._generate_pre_output_for_all_stocks(top_stocks)
+        
+        # Store intermediate results to avoid re-running
+        self._intermediate_results = pre_output_results
+          # Display pre-output results if available
+        if hasattr(self, '_intermediate_results') and self._intermediate_results:
+            self.display_pre_output_results(self._intermediate_results)
+        
+        print(f"✅ Preliminary analysis completed for {len(pre_output_results)} stocks")
+        print(f"📊 Average preliminary score: {np.mean([r['pre_final_score'] for r in pre_output_results]):.1f}/100")
+        
+         # Retrain ML model with the selected top stocks
+        model_retrained = self.retrain_ml_model_with_top_stocks(top_stocks)
+        
+        if model_retrained:
+            print(f"🤖 Using retrained ML model for recommendations")
+            self._model_retrained = True
+        else:
+            print(f"🤖 Using existing ML model for recommendations")
+            self._model_retrained = False
+        # Now generate final output using the retrained model
+        print(f"\n🎯 STEP 2: OPTIMIZED RECOMMENDATIONS WITH RETRAINED MODEL")
+        final_recommendations = self._generate_final_output_from_pre_results(pre_output_results, strategy_name)
+        
+        return final_recommendations
+    
+    def _generate_pre_output_for_all_stocks(self, top_stocks):
+        """
+        Generate pre-output for all top stocks using combined technical + ML scores
+        """
+        pre_output_results = []
+        
+        for i, stock in enumerate(top_stocks, 1):
+            symbol = stock['symbol']
+            print(f"   📊 Pre-analyzing {symbol} ({i}/{len(top_stocks)})...", end='\r')
+            
+            try:
+                # Check cache first for 2-year data
+                cached_data = self.cache.get_cached_stock_data(symbol, 'A', "2y")
+                if cached_data is not None and len(cached_data) >= 100:
+                    data = cached_data
+                else:
+                    # Download 2-year data for analysis
+                    data = self.downloader.download_stock_data(symbol, 'A', period="2y")
+                    if data is None or len(data) < 100:
+                        continue
+                    
+                    # Cache the data
+                    self.cache.cache_stock_data(symbol, 'A', "2y", data)
+                
+                # Analyze with ML (this will use existing model or fallback)
+                analysis_result = self.analyzer.analyze_chinese_stock(symbol, 'A')
+                
+                if analysis_result:
+                    # Extract scores and data
+                    technical_score = analysis_result.get('technical_score', 0)
+                    ml_score = analysis_result.get('ml_score', 0)
+                    ml_probability = analysis_result.get('ml_probability', 0.5)
+                    stock_name = analysis_result.get('stock_name', symbol)
+                    current_price = analysis_result.get('current_price', 0)
+                    estimated_high_10d = analysis_result.get('estimated_high_10d', 0)
+                    estimated_low_10d = analysis_result.get('estimated_low_10d', 0)
+                    potential_gain_10d = analysis_result.get('potential_gain_10d', 0)
+                    potential_loss_10d = analysis_result.get('potential_loss_10d', 0)
+                    high_confidence = analysis_result.get('high_confidence', 0)
+                    low_confidence = analysis_result.get('low_confidence', 0)
+                    
+                    # Calculate pre-final score using combined technical + ML
+                    pre_final_score = self._calculate_pre_final_score(technical_score, ml_score, ml_probability)
+                    
+                    # Store pre-output result
+                    pre_output_results.append({
+                        'symbol': symbol,
+                        'stock_name': stock_name,
+                        'technical_score': technical_score,
+                        'ml_score': ml_score,
+                        'ml_probability': ml_probability,
+                        'pre_final_score': pre_final_score,
+                        'current_price': current_price,
+                        'estimated_high_10d': estimated_high_10d,
+                        'estimated_low_10d': estimated_low_10d,
+                        'potential_gain_10d': potential_gain_10d,
+                        'potential_loss_10d': potential_loss_10d,
+                        'high_confidence': high_confidence,
+                        'low_confidence': low_confidence,
+                        'data': data  # Store data for later use
+                    })
+                    
+                    print(f"      ✅ {stock_name} - Pre-score: {pre_final_score:.1f}/100")
+                
+                # Add delay to avoid server resistance
+                time.sleep(0.3)
+                
+            except Exception as e:
+                print(f"      ❌ Error pre-analyzing {symbol}: {str(e)}")
+                continue
+        
+        # Sort by pre-final score
+        pre_output_results.sort(key=lambda x: x['pre_final_score'], reverse=True)
+        
+        return pre_output_results
+    
+    def _calculate_pre_final_score(self, technical_score, ml_score, ml_probability):
+        """
+        Calculate pre-final score using combined technical + ML approach
+        """
+        # Convert ML probability to score (0-100)
+        ml_prob_score = ml_probability * 100
+        
+        # Enhanced weighting for pre-output
+        # Technical score gets more weight initially, ML gets weight based on confidence
+        ml_confidence_weight = min(ml_probability * 2, 0.4)  # Max 40% weight for ML
+        technical_weight = 1.0 - ml_confidence_weight
+        
+        pre_final_score = (technical_score * technical_weight) + (ml_prob_score * ml_confidence_weight)
+        
+        return round(pre_final_score, 1)
+    
+    def _generate_final_output_from_pre_results(self, pre_output_results, strategy_name):
+        """
+        Generate optimized recommendations using retrained model from preliminary results
+        """
+        final_recommendations = []
+        
+        for i, pre_result in enumerate(pre_output_results, 1):
+            symbol = pre_result['symbol']
+            print(f"   🎯 Optimizing {symbol} ({i}/{len(pre_output_results)})...", end='\r')
+            
+            try:
+                # Get market features for ML scoring
+                data = pre_result['data']
+                current = data.iloc[-1]
+                current_price = pre_result['current_price']
+                
+                market_features = {
+                    'price_momentum_5': current.get('Price_Momentum_5', 0),
+                    'price_momentum_10': current.get('Price_Momentum_10', 0),
+                    'price_momentum_20': current.get('Price_Momentum_20', 0),
+                    'volume_ratio': current.get('Volume_Ratio', 1.0),
+                    'volume_ma_20': current.get('Volume_MA_20', 1000000),
+                    'rsi': current.get('RSI', 50),
+                    'macd': current.get('MACD', 0),
+                    'macd_signal': current.get('MACD_Signal', 0),
+                    'macd_histogram': current.get('MACD_Histogram', 0),
+                    'bollinger_position': current.get('BB_Position', 0.5),
+                    'volatility_10': current.get('Volatility_10', 0.02),
+                    'volatility_20': current.get('Volatility_20', 0.02),
+                    'volatility_50': current.get('Volatility_50', 0.02),
+                    'sma_20': current.get('SMA_20', current_price),
+                    'sma_50': current.get('SMA_50', current_price),
+                    'ema_12': current.get('EMA_12', current_price),
+                    'ema_26': current.get('EMA_26', current_price),
+                    'support_20': current.get('Support_20', current_price * 0.9),
+                    'resistance_20': current.get('Resistance_20', current_price * 1.1),
+                    'price_vs_sma20': (current_price - current.get('SMA_20', current_price)) / current.get('SMA_20', current_price),
+                    'price_vs_sma50': (current_price - current.get('SMA_50', current_price)) / current.get('SMA_50', current_price),
+                    'stock_price_level': current_price,
+                    'stock_volume_level': current.get('volume', 1000000),
+                    'symbol_hash': hash(symbol) % 1000
+                }
+                
+                # Use improved ML scoring model for final score
+                if self.ml_scoring_model.is_trained and self.ml_scoring_model.is_reliable():
+                    final_score = self.ml_scoring_model.predict_improved_score(
+                        pre_result['technical_score'], pre_result['ml_score'], market_features, symbol
+                    )
+                    # Check if model was recently retrained (within this session)
+                    if hasattr(self, '_model_retrained') and self._model_retrained:
+                        scoring_method = "Retrained ML Model"
+                    else:
+                        scoring_method = "ML Model"
+                else:
+                    # Fallback to enhanced weighting
+                    final_score = self.ml_scoring_model._enhanced_fallback_score(
+                        pre_result['technical_score'], pre_result['ml_score']
+                    )
+                    scoring_method = "Enhanced Weighting"
+                
+                # Determine recommendation
+                if final_score >= 80:
+                    recommendation = "STRONG BUY"
+                    emoji = "🚀"
+                elif final_score >= 65:
+                    recommendation = "BUY"
+                    emoji = "📈"
+                elif final_score >= 50:
+                    recommendation = "HOLD"
+                    emoji = "⏸️"
+                elif final_score >= 35:
+                    recommendation = "SELL"
+                    emoji = "📉"
+                else:
+                    recommendation = "STRONG SELL"
+                    emoji = "💥"
+                
+                final_recommendations.append({
+                    'symbol': symbol,
+                    'stock_name': pre_result['stock_name'],
+                    'strategy': strategy_name,
+                    'technical_score': pre_result['technical_score'],
+                    'ml_score': pre_result['ml_score'],
+                    'ml_probability': pre_result['ml_probability'],
+                    'final_score': final_score,
+                    'scoring_method': scoring_method,
+                    'recommendation': recommendation,
+                    'emoji': emoji,
+                    'current_price': pre_result['current_price'],
+                    'estimated_high_10d': pre_result['estimated_high_10d'],
+                    'estimated_low_10d': pre_result['estimated_low_10d'],
+                    'potential_gain_10d': pre_result['potential_gain_10d'],
+                    'potential_loss_10d': pre_result['potential_loss_10d'],
+                    'high_confidence': pre_result['high_confidence'],
+                    'low_confidence': pre_result['low_confidence'],
+                    'pre_final_score': pre_result['pre_final_score']  # Include for comparison
+                })
+                
+                print(f"      ✅ {pre_result['stock_name']} - {recommendation} {emoji} (Score: {final_score}, Pre: {pre_result['pre_final_score']:.1f})")
+                
+            except Exception as e:
+                print(f"      ❌ Error final-analyzing {symbol}: {str(e)}")
+                continue
+        
+        # Sort by final score and return top 5
+        final_recommendations.sort(key=lambda x: x['final_score'], reverse=True)
+        top_5_recommendations = final_recommendations[:5]
+        
+        return top_5_recommendations
+    
+    def display_recommendations(self, recommendations):
+        """
+        Display recommendations with improved ML scoring information and save to file
+        """
+        if not recommendations:
+            print("❌ No recommendations to display")
+            return
+        
+        # Get strategy name from first recommendation
+        strategy_name = recommendations[0].get('strategy', 'Unknown Strategy')
+        
+        print(f"\n{'='*100}")
+        print(f"🎯 FINAL RECOMMENDATIONS")
+        print(f"{'='*100}")
+        
+        # Check if ML model is being used
+        ml_model_used = any(rec.get('scoring_method') == 'ML Model' for rec in recommendations)
+        
+        if ml_model_used:
+            print(f"🤖 ML Scoring Model: ✅ ACTIVE")
+        else:
+            print(f"🤖 ML Scoring Model: ⚠️  Enhanced Weighting (Fallback)")
+        
+        print(f"📊 Total Recommendations: {len(recommendations)}")
+        print(f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*100}")
+        
+        # Display each recommendation
+        for i, rec in enumerate(recommendations, 1):
+            print(f"\n{i}. {rec['emoji']} {rec['stock_name']} ({rec['symbol']})")
+            print(f"   Strategy: {rec['strategy']}")
+            print(f"   Recommendation: {rec['recommendation']} {rec['emoji']}")
+            print(f"   Current Price: ¥{rec['current_price']:.2f}")
+            
+            # Scoring information
+            print(f"   📊 Scoring:")
+            print(f"      Technical Score: {rec['technical_score']:.1f}/100")
+            print(f"      ML Score: {rec['ml_score']:.1f}/100")
+            print(f"      ML Probability: {rec['ml_probability']:.1%}")
+            print(f"      Final Score: {rec['final_score']}/100 ({rec['scoring_method']})")
+            
+            # Show pre-output comparison if available
+            if 'pre_final_score' in rec:
+                score_change = rec['final_score'] - rec['pre_final_score']
+                change_emoji = "📈" if score_change > 0 else "📉" if score_change < 0 else "➡️"
+                print(f"      Pre-Output Score: {rec['pre_final_score']:.1f}/100 (Change: {change_emoji} {score_change:+.1f})")
+            
+            # Price estimates and confidence
+            if rec['estimated_high_10d'] > 0 and rec['estimated_low_10d'] > 0:
+                print(f"   📈 10-Day Price Estimates:")
+                print(f"      High: ¥{rec['estimated_high_10d']:.2f} (Confidence: {rec['high_confidence']:.1f}%)")
+                print(f"      Low: ¥{rec['estimated_low_10d']:.2f} (Confidence: {rec['low_confidence']:.1f}%)")
+                
+                if rec['potential_gain_10d'] > 0:
+                    print(f"      Potential Gain: +{rec['potential_gain_10d']:.1%}")
+                if rec['potential_loss_10d'] > 0:
+                    print(f"      Potential Loss: -{rec['potential_loss_10d']:.1%}")
+            
+            print(f"   {'─'*80}")
+        
+        # Summary statistics
+        print(f"\n📊 SUMMARY STATISTICS:")
+        print(f"   Average Technical Score: {np.mean([r['technical_score'] for r in recommendations]):.1f}")
+        print(f"   Average ML Score: {np.mean([r['ml_score'] for r in recommendations]):.1f}")
+        print(f"   Average Final Score: {np.mean([r['final_score'] for r in recommendations]):.1f}")
+        print(f"   Average ML Probability: {np.mean([r['ml_probability'] for r in recommendations]):.1%}")
+        
+        # Show pre-output comparison if available
+        if 'pre_final_score' in recommendations[0]:
+            avg_pre_score = np.mean([r['pre_final_score'] for r in recommendations])
+            avg_final_score = np.mean([r['final_score'] for r in recommendations])
+            avg_change = avg_final_score - avg_pre_score
+            print(f"   Average Pre-Output Score: {avg_pre_score:.1f}")
+            print(f"   Average Score Change: {avg_change:+.1f}")
+        
+        # Count recommendations by type
+        strong_buy = len([r for r in recommendations if r['recommendation'] == 'STRONG BUY'])
+        buy = len([r for r in recommendations if r['recommendation'] == 'BUY'])
+        hold = len([r for r in recommendations if r['recommendation'] == 'HOLD'])
+        sell = len([r for r in recommendations if r['recommendation'] == 'SELL'])
+        strong_sell = len([r for r in recommendations if r['recommendation'] == 'STRONG SELL'])
+        
+        print(f"\n🎯 RECOMMENDATION BREAKDOWN:")
+        if strong_buy > 0:
+            print(f"   🚀 Strong Buy: {strong_buy}")
+        if buy > 0:
+            print(f"   📈 Buy: {buy}")
+        if hold > 0:
+            print(f"   ⏸️  Hold: {hold}")
+        if sell > 0:
+            print(f"   📉 Sell: {sell}")
+        if strong_sell > 0:
+            print(f"   💥 Strong Sell: {strong_sell}")
+        
+        # ML model status
+        if ml_model_used:
+            print(f"\n🤖 ML MODEL STATUS: ✅ Active and Reliable")
+            print(f"   The final scores are calculated using the trained ML model")
+            print(f"   which considers technical indicators, ML predictions, and market features.")
+        else:
+            print(f"\n🤖 ML MODEL STATUS: ⚠️  Using Enhanced Weighting")
+            print(f"   The final scores use an enhanced weighting algorithm")
+            print(f"   as the ML model is not available or not reliable enough.")
+        
+        print(f"\n{'='*100}")
+        print(f"💡 DISCLAIMER: These recommendations are for educational purposes only.")
+        print(f"   Always conduct your own research before making investment decisions.")
+        print(f"{'='*100}")
+        
+        # Save recommendations to file
+        self.save_recommendations_to_file(recommendations, strategy_name)
+
+    def save_recommendations_to_file(self, recommendations, strategy_name):
+        """
+        Save recommendations to a single file with timestamp
+        """
+        if not recommendations:
+            return False
+        
+        try:
+            # Use a single file for all recommendations
+            filename = "chinese_stock_recommendations.txt"
+            
+            with open(filename, 'a', encoding='utf-8') as f:
+                # Add separator and timestamp
+                f.write(f"\n{'='*80}\n")
+                f.write(f"🎯 CHINESE STOCK RECOMMENDATIONS\n")
+                f.write(f"Strategy: {strategy_name}\n")
+                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Total Recommendations: {len(recommendations)}\n")
+                f.write("=" * 80 + "\n\n")
+                
+                # Check ML model status
+                ml_model_used = any(rec.get('scoring_method') == 'ML Model' for rec in recommendations)
+                if ml_model_used:
+                    f.write("🤖 ML Scoring Model: ✅ ACTIVE\n")
+                else:
+                    f.write("🤖 ML Scoring Model: ⚠️  Enhanced Weighting (Fallback)\n")
+                f.write("\n")
+                
+                # Write each recommendation
+                for i, rec in enumerate(recommendations, 1):
+                    f.write(f"{i}. {rec['emoji']} {rec['stock_name']} ({rec['symbol']})\n")
+                    f.write(f"   Strategy: {rec['strategy']}\n")
+                    f.write(f"   Recommendation: {rec['recommendation']} {rec['emoji']}\n")
+                    f.write(f"   Current Price: ¥{rec['current_price']:.2f}\n")
+                    
+                    # Scoring information
+                    f.write(f"   📊 Scoring:\n")
+                    f.write(f"      Technical Score: {rec['technical_score']:.1f}/100\n")
+                    f.write(f"      ML Score: {rec['ml_score']:.1f}/100\n")
+                    f.write(f"      ML Probability: {rec['ml_probability']:.1%}\n")
+                    f.write(f"      Final Score: {rec['final_score']}/100 ({rec['scoring_method']})\n")
+                    
+                    # Show pre-output comparison if available
+                    if 'pre_final_score' in rec:
+                        score_change = rec['final_score'] - rec['pre_final_score']
+                        change_emoji = "📈" if score_change > 0 else "📉" if score_change < 0 else "➡️"
+                        f.write(f"      Pre-Output Score: {rec['pre_final_score']:.1f}/100 (Change: {change_emoji} {score_change:+.1f})\n")
+                    
+                    # Price estimates and confidence
+                    if rec['estimated_high_10d'] > 0 and rec['estimated_low_10d'] > 0:
+                        f.write(f"   📈 10-Day Price Estimates:\n")
+                        f.write(f"      High: ¥{rec['estimated_high_10d']:.2f} (Confidence: {rec['high_confidence']:.1f}%)\n")
+                        f.write(f"      Low: ¥{rec['estimated_low_10d']:.2f} (Confidence: {rec['low_confidence']:.1f}%)\n")
+                        
+                        if rec['potential_gain_10d'] > 0:
+                            f.write(f"      Potential Gain: +{rec['potential_gain_10d']:.1%}\n")
+                        if rec['potential_loss_10d'] > 0:
+                            f.write(f"      Potential Loss: -{rec['potential_loss_10d']:.1%}\n")
+                    
+                    f.write(f"   {'─' * 80}\n\n")
+                
+                # Summary statistics
+                f.write(f"📊 SUMMARY STATISTICS:\n")
+                f.write(f"   Average Technical Score: {np.mean([r['technical_score'] for r in recommendations]):.1f}\n")
+                f.write(f"   Average ML Score: {np.mean([r['ml_score'] for r in recommendations]):.1f}\n")
+                f.write(f"   Average Final Score: {np.mean([r['final_score'] for r in recommendations]):.1f}\n")
+                f.write(f"   Average ML Probability: {np.mean([r['ml_probability'] for r in recommendations]):.1%}\n")
+                
+                # Show pre-output comparison if available
+                if 'pre_final_score' in recommendations[0]:
+                    avg_pre_score = np.mean([r['pre_final_score'] for r in recommendations])
+                    avg_final_score = np.mean([r['final_score'] for r in recommendations])
+                    avg_change = avg_final_score - avg_pre_score
+                    f.write(f"   Average Pre-Output Score: {avg_pre_score:.1f}\n")
+                    f.write(f"   Average Score Change: {avg_change:+.1f}\n")
+                
+                # Count recommendations by type
+                strong_buy = len([r for r in recommendations if r['recommendation'] == 'STRONG BUY'])
+                buy = len([r for r in recommendations if r['recommendation'] == 'BUY'])
+                hold = len([r for r in recommendations if r['recommendation'] == 'HOLD'])
+                sell = len([r for r in recommendations if r['recommendation'] == 'SELL'])
+                strong_sell = len([r for r in recommendations if r['recommendation'] == 'STRONG SELL'])
+                
+                f.write(f"\n🎯 RECOMMENDATION BREAKDOWN:\n")
+                if strong_buy > 0:
+                    f.write(f"   🚀 Strong Buy: {strong_buy}\n")
+                if buy > 0:
+                    f.write(f"   📈 Buy: {buy}\n")
+                if hold > 0:
+                    f.write(f"   ⏸️  Hold: {hold}\n")
+                if sell > 0:
+                    f.write(f"   📉 Sell: {sell}\n")
+                if strong_sell > 0:
+                    f.write(f"   💥 Strong Sell: {strong_sell}\n")
+                
+                # ML model status
+                if ml_model_used:
+                    f.write(f"\n🤖 ML MODEL STATUS: ✅ Active and Reliable\n")
+                    f.write(f"   The final scores are calculated using the trained ML model\n")
+                    f.write(f"   which considers technical indicators, ML predictions, and market features.\n")
+                else:
+                    f.write(f"\n🤖 ML MODEL STATUS: ⚠️  Using Enhanced Weighting\n")
+                    f.write(f"   The final scores use an enhanced weighting algorithm\n")
+                    f.write(f"   as the ML model is not available or not reliable enough.\n")
+                
+                f.write(f"\n{'=' * 80}\n")
+                f.write(f"💡 DISCLAIMER: These recommendations are for educational purposes only.\n")
+                f.write(f"   Always conduct your own research before making investment decisions.\n")
+                f.write(f"{'=' * 80}\n")
+            
+            print(f"💾 Recommendations saved to: {filename}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error saving recommendations to file: {str(e)}")
+            return False
+    
+    def display_pre_output_results(self, pre_output_results):
+        """
+        Display preliminary analysis results for all analyzed stocks
+        """
+        if not pre_output_results:
+            print("❌ No preliminary results to display")
+            return
+        
+        print(f"\n{'='*80}")
+        print(f"📊 PRELIMINARY ANALYSIS RESULTS")
+        print(f"{'='*80}")
+        print(f"📊 Total Stocks Analyzed: {len(pre_output_results)}")
+        print(f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*80}")
+        
+        # Display top 10 preliminary results
+        for i, result in enumerate(pre_output_results[:10], 1):
+            print(f"\n{i}. {result['stock_name']} ({result['symbol']})")
+            print(f"   Preliminary Score: {result['pre_final_score']:.1f}/100")
+            print(f"   Technical Score: {result['technical_score']:.1f}/100")
+            print(f"   ML Score: {result['ml_score']:.1f}/100")
+            print(f"   ML Probability: {result['ml_probability']:.1%}")
+            print(f"   Current Price: ¥{result['current_price']:.2f}")
+            
+            if result['estimated_high_10d'] > 0 and result['estimated_low_10d'] > 0:
+                print(f"   📈 10-Day Estimates: ¥{result['estimated_low_10d']:.2f} - ¥{result['estimated_high_10d']:.2f}")
+            
+            print(f"   {'─'*60}")
+        
+        # Summary statistics
+        print(f"\n📊 PRELIMINARY SUMMARY:")
+        print(f"   Average Preliminary Score: {np.mean([r['pre_final_score'] for r in pre_output_results]):.1f}")
+        print(f"   Average Technical Score: {np.mean([r['technical_score'] for r in pre_output_results]):.1f}")
+        print(f"   Average ML Score: {np.mean([r['ml_score'] for r in pre_output_results]):.1f}")
+        print(f"   Average ML Probability: {np.mean([r['ml_probability'] for r in pre_output_results]):.1%}")
+        
+        # Score distribution
+        excellent = len([r for r in pre_output_results if r['pre_final_score'] >= 80])
+        good = len([r for r in pre_output_results if 65 <= r['pre_final_score'] < 80])
+        moderate = len([r for r in pre_output_results if 50 <= r['pre_final_score'] < 65])
+        poor = len([r for r in pre_output_results if r['pre_final_score'] < 50])
+        
+        print(f"\n📈 SCORE DISTRIBUTION:")
+        print(f"   🚀 Excellent (80+): {excellent}")
+        print(f"   📈 Good (65-79): {good}")
+        print(f"   ⏸️  Moderate (50-64): {moderate}")
+        print(f"   📉 Poor (<50): {poor}")
+        
+        print(f"\n{'='*80}")
+        print(f"💡 These are preliminary results before ML model optimization.")
+        print(f"   Final optimized recommendations will be available after model retraining.")
+        print(f"{'='*80}")
+
+        # Save preliminary results to file
+        self.save_preliminary_results_to_file(pre_output_results)
+    
+    def save_preliminary_results_to_file(self, pre_output_results):
+        """
+        Save preliminary analysis results to a single file with timestamp
+        """
+        if not pre_output_results:
+            return False
+        
+        try:
+            # Use a single file for all preliminary results
+            filename = "chinese_stock_preliminary_results.txt"
+            
+            with open(filename, 'a', encoding='utf-8') as f:
+                # Add separator and timestamp
+                f.write(f"\n{'='*80}\n")
+                f.write(f"📊 PRELIMINARY ANALYSIS RESULTS\n")
+                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Total Stocks Analyzed: {len(pre_output_results)}\n")
+                f.write("=" * 80 + "\n\n")
+                
+                # Write top 10 preliminary results
+                for i, result in enumerate(pre_output_results[:10], 1):
+                    f.write(f"{i}. {result['stock_name']} ({result['symbol']})\n")
+                    f.write(f"   Preliminary Score: {result['pre_final_score']:.1f}/100\n")
+                    f.write(f"   Technical Score: {result['technical_score']:.1f}/100\n")
+                    f.write(f"   ML Score: {result['ml_score']:.1f}/100\n")
+                    f.write(f"   ML Probability: {result['ml_probability']:.1%}\n")
+                    f.write(f"   Current Price: ¥{result['current_price']:.2f}\n")
+                    
+                    if result['estimated_high_10d'] > 0 and result['estimated_low_10d'] > 0:
+                        f.write(f"   📈 10-Day Estimates: ¥{result['estimated_low_10d']:.2f} - ¥{result['estimated_high_10d']:.2f}\n")
+                    
+                    f.write(f"   {'─' * 60}\n\n")
+                
+                # Summary statistics
+                f.write(f"📊 PRELIMINARY SUMMARY:\n")
+                f.write(f"   Average Preliminary Score: {np.mean([r['pre_final_score'] for r in pre_output_results]):.1f}\n")
+                f.write(f"   Average Technical Score: {np.mean([r['technical_score'] for r in pre_output_results]):.1f}\n")
+                f.write(f"   Average ML Score: {np.mean([r['ml_score'] for r in pre_output_results]):.1f}\n")
+                f.write(f"   Average ML Probability: {np.mean([r['ml_probability'] for r in pre_output_results]):.1%}\n")
+                
+                # Score distribution
+                excellent = len([r for r in pre_output_results if r['pre_final_score'] >= 80])
+                good = len([r for r in pre_output_results if 65 <= r['pre_final_score'] < 80])
+                moderate = len([r for r in pre_output_results if 50 <= r['pre_final_score'] < 65])
+                poor = len([r for r in pre_output_results if r['pre_final_score'] < 50])
+                
+                f.write(f"\n📈 SCORE DISTRIBUTION:\n")
+                f.write(f"   🚀 Excellent (80+): {excellent}\n")
+                f.write(f"   📈 Good (65-79): {good}\n")
+                f.write(f"   ⏸️  Moderate (50-64): {moderate}\n")
+                f.write(f"   📉 Poor (<50): {poor}\n")
+                
+                f.write(f"\n{'=' * 80}\n")
+                f.write(f"💡 These are preliminary results before ML model optimization.\n")
+                f.write(f"   Final optimized recommendations will be available after model retraining.\n")
+                f.write(f"{'=' * 80}\n")
+            
+            print(f"💾 Preliminary results saved to: {filename}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error saving preliminary results to file: {str(e)}")
+            return False
+    
+    def recommend(self, strategy_type, top_n=5):
+        """
+        Main recommendation method with improved ML scoring and model retraining
+        """
+        print(f"\n🎯 Chinese Stock Recommendation System")
+        print(f"Strategy: {self.strategies[strategy_type]['name']}")
+        print(f"Data Source: {self.data_source}")
+        print("=" * 60)
+        
+        # Check ML model status
+        if self.ml_scoring_model.is_trained and self.ml_scoring_model.is_reliable():
+            print(f"🤖 ML Scoring Model: ✅ Active (Reliability: {self.ml_scoring_model.get_reliability_score():.1%})")
+        else:
+            print(f"🤖 ML Scoring Model: ⚠️  Using Enhanced Weighting (Fallback)")
         
         # Get top stocks from initial screening
         top_stocks = self.get_top_stocks_by_strategy(strategy_type, top_n=20)
@@ -618,183 +1223,294 @@ class ChineseStockRecommender:
             print("❌ No suitable stocks found for this strategy")
             return []
         
-        print(f"\n🤖 Performing analysis on top {len(top_stocks)} stocks...")
+        print(f"\n📊 Initial screening completed: {len(top_stocks)} stocks selected")
         
-        final_recommendations = []
-        ml_success_count = 0
+        # Get final recommendations with ML integration (no retraining here)
+        strategy_name = self.strategies[strategy_type]['name']
+        final_recommendations = self.get_final_recommendations(top_stocks, strategy_name)
         
-        for i, stock in enumerate(top_stocks, 1):
-            print(f"📊 Analyzing {stock['symbol']} ({i}/{len(top_stocks)})", end='\r')
+        if not final_recommendations:
+            print("❌ No final recommendations generated")
+            return []
+        
+        
+        # Display recommendations
+        self.display_recommendations(final_recommendations)
+        
+        return final_recommendations
+
+    def retrain_ml_model_with_top_stocks(self, top_stocks):
+        """
+        Retrain ML model with data from selected top stocks
+        """
+        if not top_stocks:
+            print("❌ No top stocks provided for retraining")
+            return False
+        
+        print(f"\n🤖 RETRAINING ML MODEL WITH TOP {len(top_stocks)} STOCKS")
+        print(f"📊 Collecting training data...")
+        
+        # Collect 2-year data for selected stocks
+        training_data = []
+        collected_stocks = 0
+        
+        for i, stock_info in enumerate(top_stocks, 1):
+            symbol = stock_info['symbol']
+            market = stock_info.get('market', 'A')
             
-            # Add delay every 5 stocks to avoid server resistance
-            if i % 5 == 0:
-                time.sleep(0.5)
+            print(f"   📈 Processing {symbol} ({i}/{len(top_stocks)})...", end='\r')
             
-            # Try ML analysis first
-            ml_result = self.analyze_stock_with_ml(stock['symbol'], stock['market'])
-            
-            if ml_result:
-                # Use ML results
-                ml_probability = ml_result.get('probability', 0.5)
-                ml_prediction = ml_result.get('prediction', 'HOLD')
+            try:
+                # Check cache first for 2-year data
+                cached_data = self.cache.get_cached_stock_data(symbol, market, "2y")
                 
-                # Calculate final score (70% technical + 30% ML)
-                final_score = (stock['score'] * 0.7) + (ml_probability * 100 * 0.3)
-                
-                # Determine action based on combined score and ML probability
-                if final_score >= 80 and ml_probability > 0.7:
-                    action = "STRONG BUY"
-                elif final_score >= 70 and ml_probability > 0.6:
-                    action = "BUY"
-                elif final_score >= 60 and ml_probability > 0.5:
-                    action = "HOLD"
+                if cached_data is not None and len(cached_data) > 400:  # At least 2 years
+                    print(f"      ✅ Using cached 2-year data ({len(cached_data)} days)")
+                    data = cached_data
                 else:
-                    action = "HOLD"
-                
-                ml_success_count += 1
-                stock_name = ml_result['stock_name']
-            else:
-                # Fallback to technical analysis only
-                ml_probability = 0.5
-                ml_prediction = 'HOLD'
-                final_score = stock['score']
-                stock_name = self.downloader.get_stock_name(stock['symbol'], stock['market'])
-                
-                # Determine action based on technical score only
-                if final_score >= 80:
-                    action = "STRONG BUY"
-                elif final_score >= 70:
-                    action = "BUY"
-                elif final_score >= 60:
-                    action = "HOLD"
-                else:
-                    action = "HOLD"
-            
-            # Create recommendation with all available data
-            recommendation = {
-                'symbol': stock['symbol'],
-                'market': stock['market'],
-                'stock_name': stock_name,
-                'final_score': round(final_score, 2),
-                'technical_score': stock['score'],
-                'ml_probability': round(ml_probability, 3),
-                'ml_prediction': ml_prediction,
-                'action': action,
-                'current_price': stock['current_price'],
-                'reasons': stock['reasons'],
-                'volume_ratio': stock['volume_ratio'],
-                'momentum_5d': stock['momentum_5d'],
-                'rsi': stock['rsi']
-            }
-            
-            # Add price estimates and confidence if available from ML analysis
-            if ml_result:
-                if 'estimated_high_10d' in ml_result:
-                    recommendation['estimated_high_10d'] = ml_result['estimated_high_10d']
-                if 'estimated_low_10d' in ml_result:
-                    recommendation['estimated_low_10d'] = ml_result['estimated_low_10d']
-                if 'potential_gain_10d' in ml_result:
-                    recommendation['potential_gain_10d'] = ml_result['potential_gain_10d']
-                if 'potential_loss_10d' in ml_result:
-                    recommendation['potential_loss_10d'] = ml_result['potential_loss_10d']
-                if 'high_confidence' in ml_result:
-                    recommendation['high_confidence'] = ml_result['high_confidence']
-                if 'low_confidence' in ml_result:
-                    recommendation['low_confidence'] = ml_result['low_confidence']
-            
-            final_recommendations.append(recommendation)
-        
-        print(f"\n✅ Analysis completed for {len(final_recommendations)} stocks")
-        if ml_success_count > 0:
-            print(f"🤖 ML integration successful for {ml_success_count}/{len(final_recommendations)} stocks")
-        else:
-            print(f"📊 Using technical analysis only (ML integration in development)")
-        
-        # Sort by final score and return top N
-        final_recommendations.sort(key=lambda x: x['final_score'], reverse=True)
-        return final_recommendations[:top_n]
-    
-    def display_recommendations(self, recommendations):
-        """Display final recommendations"""
-        if not recommendations:
-            print("❌ No recommendations available")
-            return
-        
-        print(f"\n{'='*80}")
-        print(f"🎯 TOP {len(recommendations)} CHINESE STOCK RECOMMENDATIONS")
-        print(f"{'='*80}")
-        
-        for i, rec in enumerate(recommendations, 1):
-            stock_display = f"{rec['symbol']} ({rec['market']}-shares)"
-            if 'stock_name' in rec and rec['stock_name'] != rec['symbol']:
-                stock_display += f" - {rec['stock_name']}"
-            
-            print(f"\n{i}. {stock_display}")
-            print(f"   📊 Final Score: {rec['final_score']:.2f}/100")
-            print(f"   📈 Technical Score: {rec['technical_score']:.2f}/100")
-            print(f"   🤖 ML Probability: {rec['ml_probability']:.3f}")
-            print(f"   🤖 ML Prediction: {rec['ml_prediction']}")
-            print(f"   💡 Action: {rec['action']}")
-            print(f"   💰 Current Price: ¥{rec['current_price']:.2f}")
-            
-            # Show price estimates and confidence if available
-            if 'estimated_high_10d' in rec and 'estimated_low_10d' in rec:
-                print(f"   📈 10d Range: ¥{rec['estimated_low_10d']:.2f} - ¥{rec['estimated_high_10d']:.2f}")
-                print(f"   📊 Gain: {rec['potential_gain_10d']:.1%} | Loss: {rec['potential_loss_10d']:.1%}")
-                
-                # Show confidence with emoji
-                if 'high_confidence' in rec and 'low_confidence' in rec:
-                    avg_confidence = (rec['high_confidence'] + rec['low_confidence']) / 2
-                    if avg_confidence >= 80:
-                        conf_emoji = "🟢"
-                    elif avg_confidence >= 70:
-                        conf_emoji = "🟡"
-                    elif avg_confidence >= 60:
-                        conf_emoji = "🟠"
+                    print(f"      📥 Downloading 2-year data...")
+                    data = self.downloader.download_stock_data(symbol, market, "2y")
+                    
+                    if data is not None and len(data) > 400:
+                        # Cache the downloaded data
+                        self.cache.cache_stock_data(symbol, market, "2y", data)
+                        print(f"      ✅ Downloaded and cached ({len(data)} days)")
                     else:
-                        conf_emoji = "🔴"
-                    print(f"   🎯 Price Confidence: {conf_emoji} {avg_confidence:.0f}%")
-            
-            print(f"   📊 Volume Ratio: {rec['volume_ratio']:.2f}")
-            print(f"   📈 5-day Momentum: {rec['momentum_5d']:.2%}")
-            print(f"   📊 RSI: {rec['rsi']:.1f}")
-            
-            if rec['reasons']:
-                print(f"   ✅ Key Strengths:")
-                for reason in rec['reasons'][:3]:  # Show top 3 reasons
-                    print(f"      • {reason}")
-            
-            print(f"   {'-'*60}")
+                        print(f"      ⚠️  Insufficient data for {symbol}, skipping")
+                        continue
+                
+                # Calculate indicators
+                data_with_indicators = self.calculate_technical_indicators(data.copy())
+                
+                if data_with_indicators is None:
+                    print(f"      ⚠️  Failed to calculate indicators for {symbol}, skipping")
+                    continue
+                
+                # Create training data for this stock
+                stock_training_data = self.create_training_data_from_stock(
+                    data_with_indicators, symbol, market
+                )
+                
+                if stock_training_data:
+                    training_data.extend(stock_training_data)
+                    collected_stocks += 1
+                    print(f"      ✅ Added {len(stock_training_data)} training samples")
+                else:
+                    print(f"      ⚠️  No training data generated for {symbol}")
+                
+            except Exception as e:
+                print(f"      ❌ Error processing {symbol}: {str(e)}")
+                continue
         
-        print(f"\n📊 Summary:")
-        strong_buy = len([r for r in recommendations if r['action'] == 'STRONG BUY'])
-        buy = len([r for r in recommendations if r['action'] == 'BUY'])
-        hold = len([r for r in recommendations if r['action'] == 'HOLD'])
+        print(f"\n📊 Data collection completed!")
+        print(f"   ✅ Successfully processed {collected_stocks}/{len(top_stocks)} stocks")
+        print(f"   📈 Total training samples: {len(training_data)}")
         
-        print(f"   🚀 Strong Buy: {strong_buy}")
-        print(f"   📈 Buy: {buy}")
-        print(f"   ⏸️  Hold: {hold}")
+        if len(training_data) < 100:
+            print(f"❌ Insufficient training data ({len(training_data)} samples)")
+            return False
         
-        if strong_buy > 0:
-            print(f"\n🎯 RECOMMENDED ACTION: Focus on STRONG BUY stocks for best potential returns!")
-        elif buy > 0:
-            print(f"\n📈 RECOMMENDED ACTION: Consider BUY stocks with proper risk management!")
+        # Train the improved ML model
+        print(f"\n🤖 Training improved ML scoring model...")
+        success = self.ml_scoring_model.train_improved_model(training_data)
+        
+        if success:
+            print(f"✅ ML model retraining completed successfully!")
+            print(f"📊 Model trained on {len(training_data)} samples from {collected_stocks} stocks")
+            return True
         else:
-            print(f"\n⚠️  RECOMMENDED ACTION: Market conditions may not be optimal. Consider waiting for better opportunities.")
+            print(f"❌ ML model retraining failed")
+            return False
+
+    def create_training_data_from_stock(self, data_with_indicators, symbol, market):
+        """
+        Create training data from a single stock's historical data
+        """
+        if data_with_indicators is None or len(data_with_indicators) < 50:
+            return None
+        
+        training_samples = []
+        
+        try:
+            # Calculate scores for each day (skip first 30, leave 10 for return calculation)
+            for j in range(30, len(data_with_indicators) - 10):
+                current = data_with_indicators.iloc[j]
+                
+                # Calculate technical score for this point
+                tech_score = self.calculate_technical_score_for_point(data_with_indicators, j)
+                
+                # Calculate ML-like score based on indicators
+                ml_score = self.calculate_ml_like_score_for_point(current)
+                
+                # Calculate actual return (10-day forward return)
+                current_price = data_with_indicators.iloc[j]['close']
+                future_price = data_with_indicators.iloc[j+10]['close']
+                actual_return = (future_price - current_price) / current_price
+                
+                # Convert return to target score
+                target_score = self._enhanced_return_to_score(actual_return)
+                
+                # Create market features
+                market_features = {
+                    'stock_price_level': self._normalize_price_level(current_price),
+                    'stock_volume_level': self._normalize_volume_level(current.get('Volume_Ratio', 1.0)),
+                    'volatility': current.get('Volatility_20', 0.02),
+                    'momentum': current.get('Price_Momentum_5', 0),
+                    'macd': current.get('MACD', 0),
+                    'rsi': current.get('RSI', 50),
+                    'bollinger_position': current.get('BB_Position', 0.5),
+                    'symbol_hash': hash(symbol) % 1000  # Simple hash for symbol
+                }
+                
+                # Create training sample
+                sample = {
+                    'technical_score': tech_score,
+                    'ml_score': ml_score,
+                    'target_score': target_score,
+                    'actual_return': actual_return,
+                    **market_features
+                }
+                
+                training_samples.append(sample)
+            
+            return training_samples
+            
+        except Exception as e:
+            print(f"      ❌ Error creating training data for {symbol}: {str(e)}")
+            return None
     
-    def run_recommendation_analysis(self, strategy_type='1'):
-        """Run complete recommendation analysis"""
-        print(f"\n🚀 Starting Chinese Stock Recommendation Analysis")
-        print(f"📊 Strategy: {self.strategies[strategy_type]['name']}")
-        print(f"📝 Description: {self.strategies[strategy_type]['description']}")
-        
-        # Clear expired cache
-        self.cache.clear_expired_cache()
-        
-        # Get final recommendations
-        recommendations = self.get_final_recommendations(strategy_type, top_n=5)
-        
-        # Display results
-        self.display_recommendations(recommendations)
-        
-        return recommendations
+    def calculate_technical_score_for_point(self, data, index):
+        """
+        Calculate technical score for a specific point in time
+        """
+        try:
+            current = data.iloc[index]
+            
+            score = 50  # Base score
+            
+            # Momentum scoring
+            momentum_5 = current.get('Price_Momentum_5', 0)
+            if momentum_5 > 0.05:
+                score += 15
+            elif momentum_5 > 0.02:
+                score += 10
+            elif momentum_5 < -0.05:
+                score -= 15
+            
+            # Volume scoring
+            volume_ratio = current.get('Volume_Ratio', 1.0)
+            if volume_ratio > 1.5:
+                score += 10
+            elif volume_ratio < 0.5:
+                score -= 5
+            
+            # Moving average scoring
+            close = current['close']
+            sma_20 = current.get('SMA_20', close)
+            sma_50 = current.get('SMA_50', close)
+            
+            if close > sma_20 > sma_50:
+                score += 15
+            elif close < sma_20 < sma_50:
+                score -= 15
+            
+            # RSI scoring
+            rsi = current.get('RSI', 50)
+            if rsi > 70:
+                score -= 10
+            elif rsi < 30:
+                score += 10
+            
+            return max(0, min(100, score))
+            
+        except Exception as e:
+            return 50  # Default score on error
+    
+    def calculate_ml_like_score_for_point(self, current):
+        """
+        Calculate ML-like score based on technical indicators
+        """
+        try:
+            score = 50  # Base score
+            
+            # RSI-based adjustment
+            rsi = current.get('RSI', 50)
+            if rsi > 70:
+                score -= 20  # Overbought
+            elif rsi > 60:
+                score -= 10
+            elif rsi < 30:
+                score += 20  # Oversold
+            elif rsi < 40:
+                score += 10
+            
+            # Momentum-based adjustment
+            momentum = current.get('Price_Momentum_5', 0)
+            if momentum > 0.05:
+                score += 15
+            elif momentum > 0.02:
+                score += 10
+            elif momentum < -0.05:
+                score -= 15
+            elif momentum < -0.02:
+                score -= 10
+            
+            # Volume-based adjustment
+            volume_ratio = current.get('Volume_Ratio', 1.0)
+            if volume_ratio > 1.5:
+                score += 10
+            elif volume_ratio < 0.5:
+                score -= 5
+            
+            # MACD-based adjustment
+            macd = current.get('MACD', 0)
+            if macd > 0:
+                score += 5
+            else:
+                score -= 5
+            
+            return max(0, min(100, score))
+            
+        except Exception as e:
+            return 50  # Default score on error
+    
+    def _enhanced_return_to_score(self, return_value):
+        """
+        Convert return value to target score (0-100)
+        """
+        if return_value >= 0.08:  # 8%+ gain
+            return 90 + min(10, (return_value - 0.08) * 100)  # 90-100 for 8%+ gains
+        elif return_value >= 0.05:  # 5-8% gain
+            return 80 + (return_value - 0.05) * 333  # 80-90 for 5-8% gains
+        elif return_value >= 0.03:  # 3-5% gain
+            return 70 + (return_value - 0.03) * 500  # 70-80 for 3-5% gains
+        elif return_value >= 0.01:  # 1-3% gain
+            return 60 + (return_value - 0.01) * 500  # 60-70 for 1-3% gains
+        elif return_value >= -0.01:  # -1% to 1%
+            return 50 + return_value * 500  # 45-55 for -1% to 1%
+        elif return_value >= -0.03:  # -3% to -1%
+            return 40 + (return_value + 0.03) * 500  # 40-45 for -3% to -1%
+        elif return_value >= -0.05:  # -5% to -3%
+            return 20 + (return_value + 0.05) * 1000  # 20-40 for -5% to -3%
+        else:  # -5% and below
+            return max(0, 5 + (return_value + 0.05) * 100)  # 0-5 for -5%+ losses
+    
+    def _normalize_price_level(self, price):
+        """
+        Normalize price level to 0-1 range
+        """
+        # Simple normalization based on typical Chinese stock price ranges
+        if price <= 10:
+            return price / 10
+        elif price <= 50:
+            return 1.0 + (price - 10) / 40
+        elif price <= 100:
+            return 2.0 + (price - 50) / 50
+        else:
+            return 3.0 + min(2.0, (price - 100) / 100)
+    
+    def _normalize_volume_level(self, volume_ratio):
+        """
+        Normalize volume ratio to 0-1 range
+        """
+        return min(1.0, max(0.0, volume_ratio / 3.0))

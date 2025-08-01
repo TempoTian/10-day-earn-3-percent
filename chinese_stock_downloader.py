@@ -31,6 +31,34 @@ class ChineseStockDownloader:
     
     def get_chinese_stock_symbol(self, symbol, market='A'):
         """Convert Chinese stock symbol to appropriate format"""
+        # Handle case where symbol might be a DataFrame or other object
+        if not isinstance(symbol, str):
+            print(f"⚠️  Invalid symbol type: {type(symbol)}, using default symbol")
+            if hasattr(symbol, 'iloc'):
+                print(f"   Symbol appears to be a DataFrame with shape: {symbol.shape}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    symbol = str(symbol.iloc[0, 0]) if symbol.shape[1] > 0 else "000001"
+                    print(f"   Extracted symbol from DataFrame: {symbol}")
+                except:
+                    symbol = "000001"
+            else:
+                symbol = str(symbol) if symbol is not None else "000001"
+        
+        # Handle case where market might be a DataFrame or other object
+        if not isinstance(market, str):
+            print(f"⚠️  Invalid market type: {type(market)}, using default market 'A'")
+            if hasattr(market, 'iloc'):
+                print(f"   Market appears to be a DataFrame with shape: {market.shape}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    market = str(market.iloc[0, 0]) if market.shape[1] > 0 else "A"
+                    print(f"   Extracted market from DataFrame: {market}")
+                except:
+                    market = "A"
+            else:
+                market = str(market) if market is not None else "A"
+        
         symbol = symbol.strip().upper()
         
         if self.data_source == 'yfinance':
@@ -52,42 +80,62 @@ class ChineseStockDownloader:
     
     def get_stock_name(self, symbol, market='A'):
         """Get stock abbreviation for a given symbol"""
+        # Handle case where symbol might be a DataFrame or other object
+        if not isinstance(symbol, str):
+            print(f"⚠️  Invalid symbol type in get_stock_name: {type(symbol)}")
+            if hasattr(symbol, 'iloc'):
+                print(f"   Symbol appears to be a DataFrame with shape: {symbol.shape}")
+                print(f"   Symbol DataFrame columns: {list(symbol.columns)}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    symbol = str(symbol.iloc[0, 0]) if symbol.shape[1] > 0 else "000001"
+                    print(f"   Extracted symbol from DataFrame: {symbol}")
+                except:
+                    symbol = "000001"
+            else:
+                symbol = str(symbol) if symbol is not None else "000001"
+        
+        # Handle case where market might be a DataFrame or other object
+        if not isinstance(market, str):
+            print(f"⚠️  Invalid market type in get_stock_name: {type(market)}")
+            if hasattr(market, 'iloc'):
+                print(f"   Market appears to be a DataFrame with shape: {market.shape}")
+                print(f"   Market DataFrame columns: {list(market.columns)}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    market = str(market.iloc[0, 0]) if market.shape[1] > 0 else "A"
+                    print(f"   Extracted market from DataFrame: {market}")
+                except:
+                    market = "A"
+            else:
+                market = str(market) if market is not None else "A"
+        
+        # Create cache key
         cache_key = f"{symbol}_{market}"
         
+        # Check cache first
         if cache_key in self.stock_names_cache:
             return self.stock_names_cache[cache_key]
         
-        if self.ak:
-            stock_info = self.ak.stock_individual_info_em(symbol=symbol)
-            # 查看股票简称（名称）
-            stock_name = stock_info.loc[stock_info["item"] == "股票简称", "value"].values[0]
-            self.stock_names_cache[cache_key] = stock_name
-            return stock_name
-                        
         try:
             if self.data_source == 'yfinance':
-                # Try to get stock abbreviation from yfinance
+                # Try to get stock name from yfinance
                 formatted_symbol = self.get_chinese_stock_symbol(symbol, market)
                 ticker = yf.Ticker(formatted_symbol)
                 info = ticker.info
-                # Prefer shortName over longName for abbreviation
-                stock_name = info.get('shortName', info.get('longName', symbol))
                 
-                # For Chinese stocks, try to get the Chinese abbreviation
-                if market.upper() == 'A':
-                    # Try to extract Chinese abbreviation from the name
-                    if 'shortName' in info and info['shortName']:
-                        stock_name = info['shortName']
-                    elif 'longName' in info and info['longName']:
-                        # Try to get a shorter version
-                        long_name = info['longName']
-                        # Remove common suffixes
-                        for suffix in [' Co., Ltd.', ' Company Limited', ' Group Co., Ltd.', ' Corporation']:
-                            if long_name.endswith(suffix):
-                                long_name = long_name[:-len(suffix)]
-                        stock_name = long_name
-                    else:
-                        stock_name = symbol
+                if info and 'shortName' in info and info['shortName']:
+                    stock_name = info['shortName']
+                elif 'longName' in info and info['longName']:
+                    # Try to get a shorter version
+                    long_name = info['longName']
+                    # Remove common suffixes
+                    for suffix in [' Co., Ltd.', ' Company Limited', ' Group Co., Ltd.', ' Corporation']:
+                        if long_name.endswith(suffix):
+                            long_name = long_name[:-len(suffix)]
+                    stock_name = long_name
+                else:
+                    stock_name = symbol
             else:
                 # Try to get stock abbreviation from akshare
                 try:
@@ -267,8 +315,14 @@ class ChineseStockDownloader:
     
     def _convert_period_to_days(self, period):
         """Convert period string to number of days"""
-        if isinstance(period, int):
-            return period
+        # Handle case where period might be a DataFrame or other object
+        if not isinstance(period, str):
+            if isinstance(period, int):
+                return period
+            else:
+                # Default to 30 days if period is not a string or int
+                print(f"⚠️  Invalid period type: {type(period)}, using default 30 days")
+                return 30
         
         period = period.lower()
         if period == "1d":
@@ -298,6 +352,34 @@ class ChineseStockDownloader:
     
     def download_stock_data(self, symbol, market='A', period="1mo"):
         """Download stock data using the selected data source"""
+        # Handle case where symbol might be a DataFrame or other object
+        if not isinstance(symbol, str):
+            print(f"⚠️  Invalid symbol type in download_stock_data: {type(symbol)}")
+            if hasattr(symbol, 'iloc'):
+                print(f"   Symbol appears to be a DataFrame with shape: {symbol.shape}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    symbol = str(symbol.iloc[0, 0]) if symbol.shape[1] > 0 else "000001"
+                    print(f"   Extracted symbol from DataFrame: {symbol}")
+                except:
+                    return None
+            else:
+                symbol = str(symbol) if symbol is not None else "000001"
+        
+        # Handle case where market might be a DataFrame or other object
+        if not isinstance(market, str):
+            print(f"⚠️  Invalid market type in download_stock_data: {type(market)}")
+            if hasattr(market, 'iloc'):
+                print(f"   Market appears to be a DataFrame with shape: {market.shape}")
+                # Try to extract the first value if it's a DataFrame
+                try:
+                    market = str(market.iloc[0, 0]) if market.shape[1] > 0 else "A"
+                    print(f"   Extracted market from DataFrame: {market}")
+                except:
+                    market = "A"
+            else:
+                market = str(market) if market is not None else "A"
+        
         if self.data_source == 'yfinance':
             return self.download_stock_data_yfinance(symbol, market, period)
         elif self.data_source == 'akshare':
