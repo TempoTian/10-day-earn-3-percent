@@ -1,493 +1,845 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Improved ML Scoring System with Better Reliability
-Enhanced features and validation for recommendation system integration
+Enhanced ML Scoring Model for Chinese Stock Recommendations
+Improved version with better regularization and validation
 """
 
-import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
+import pandas as pd
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import Ridge, Lasso
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-import joblib
+from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.pipeline import Pipeline
+import pickle
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
 class ImprovedMLScoringModel:
-    def __init__(self, model_path='improved_ml_scoring_model.pkl'):
-        """
-        Initialize improved ML-based scoring model
-        """
-        self.model_path = model_path
+    def __init__(self):
         self.model = None
-        self.scaler = RobustScaler()  # More robust to outliers
+        self.scaler = RobustScaler()
+        self.feature_selector = None
+        self.feature_names = None
         self.is_trained = False
-        self.training_data = []
-        self.backtest_results = []
-        self.reliability_score = 0.0
+        self.model_info = {}
+        self.model_file = "improved_ml_scoring_model.pkl"
         
-    def create_enhanced_training_data(self, stock_data_dict, technical_scores_dict, ml_scores_dict, actual_returns_dict):
+    def create_enhanced_training_data(self, data_dict, technical_scores_dict=None, ml_scores_dict=None, actual_returns_dict=None):
         """
-        Create enhanced training data with better features
+        Create enhanced training data from multiple stocks
         """
-        training_data = []
+        return self.create_training_data_from_multiple_stocks(data_dict)
+    
+    def create_enhanced_features(self, data_dict):
+        """
+        Create enhanced features with advanced engineering for better accuracy
+        """
+        all_features = []
         
-        for symbol in stock_data_dict.keys():
-            stock_data = stock_data_dict[symbol]
-            technical_scores = technical_scores_dict.get(symbol, [])
-            ml_scores = ml_scores_dict.get(symbol, [])
-            actual_returns = actual_returns_dict.get(symbol, [])
-            
-            if len(technical_scores) != len(ml_scores) or len(technical_scores) != len(actual_returns):
+        for symbol, data in data_dict.items():
+            if data is None or len(data) < 50:
                 continue
                 
-            for i in range(len(technical_scores)):
-                if i < 30:  # Skip first 30 days for better indicator stability
-                    continue
-                    
-                # Enhanced features with better market context
-                features = {
-                    'technical_score': technical_scores[i],
-                    'ml_score': ml_scores[i],
-                    
-                    # Price momentum features
-                    'price_momentum_5': stock_data.iloc[i].get('Price_Momentum_5', 0),
-                    'price_momentum_10': stock_data.iloc[i].get('Price_Momentum_10', 0),
-                    'price_momentum_20': stock_data.iloc[i].get('Price_Momentum_20', 0),
-                    
-                    # Volume features
-                    'volume_ratio': stock_data.iloc[i].get('Volume_Ratio', 1.0),
-                    'volume_ma_20': stock_data.iloc[i].get('Volume_MA_20', 1000000),
-                    
-                    # Technical indicators
-                    'rsi': stock_data.iloc[i].get('RSI', 50),
-                    'macd': stock_data.iloc[i].get('MACD', 0),
-                    'macd_signal': stock_data.iloc[i].get('MACD_Signal', 0),
-                    'macd_histogram': stock_data.iloc[i].get('MACD_Histogram', 0),
-                    'bollinger_position': stock_data.iloc[i].get('BB_Position', 0.5),
-                    
-                    # Volatility features
-                    'volatility_10': stock_data.iloc[i].get('Volatility_10', 0.02),
-                    'volatility_20': stock_data.iloc[i].get('Volatility_20', 0.02),
-                    'volatility_50': stock_data.iloc[i].get('Volatility_50', 0.02),
-                    
-                    # Moving averages
-                    'sma_20': stock_data.iloc[i].get('SMA_20', 0),
-                    'sma_50': stock_data.iloc[i].get('SMA_50', 0),
-                    'ema_12': stock_data.iloc[i].get('EMA_12', 0),
-                    'ema_26': stock_data.iloc[i].get('EMA_26', 0),
-                    
-                    # Support/Resistance
-                    'support_20': stock_data.iloc[i].get('Support_20', 0),
-                    'resistance_20': stock_data.iloc[i].get('Resistance_20', 0),
-                    
-                    # Market regime features
-                    'price_vs_sma20': (stock_data.iloc[i]['close'] - stock_data.iloc[i].get('SMA_20', stock_data.iloc[i]['close'])) / stock_data.iloc[i].get('SMA_20', stock_data.iloc[i]['close']),
-                    'price_vs_sma50': (stock_data.iloc[i]['close'] - stock_data.iloc[i].get('SMA_50', stock_data.iloc[i]['close'])) / stock_data.iloc[i].get('SMA_50', stock_data.iloc[i]['close']),
-                    
-                    # Stock-specific features
-                    'stock_price_level': stock_data.iloc[i]['close'],
-                    'stock_volume_level': stock_data.iloc[i]['volume'],
-                    'symbol_hash': hash(symbol) % 1000
-                }
+            # Advanced price features
+            data['Price_Change_1d'] = data['close'].pct_change(1)
+            data['Price_Change_3d'] = data['close'].pct_change(3)
+            data['Price_Change_5d'] = data['close'].pct_change(5)
+            data['Price_Change_10d'] = data['close'].pct_change(10)
+            data['Price_Change_20d'] = data['close'].pct_change(20)
+            
+            # Advanced volatility features with different windows
+            data['Volatility_5d'] = data['Price_Change_1d'].rolling(5).std()
+            data['Volatility_10d'] = data['Price_Change_1d'].rolling(10).std()
+            data['Volatility_20d'] = data['Price_Change_1d'].rolling(20).std()
+            data['Volatility_30d'] = data['Price_Change_1d'].rolling(30).std()
+            
+            # Volatility ratio features
+            data['Volatility_Ratio_5_20'] = data['Volatility_5d'] / data['Volatility_20d']
+            data['Volatility_Ratio_10_30'] = data['Volatility_10d'] / data['Volatility_30d']
+            
+            # Advanced volume features
+            data['Volume_MA_5'] = data['volume'].rolling(5).mean()
+            data['Volume_MA_10'] = data['volume'].rolling(10).mean()
+            data['Volume_MA_20'] = data['volume'].rolling(20).mean()
+            data['Volume_Ratio_5'] = data['volume'] / data['Volume_MA_5']
+            data['Volume_Ratio_10'] = data['volume'] / data['Volume_MA_10']
+            data['Volume_Ratio_20'] = data['volume'] / data['Volume_MA_20']
+            
+            # Volume trend features
+            data['Volume_Trend_5'] = data['Volume_MA_5'] / data['Volume_MA_20']
+            data['Volume_Trend_10'] = data['Volume_MA_10'] / data['Volume_MA_20']
+            
+            # Advanced moving average features
+            data['SMA_5'] = data['close'].rolling(5).mean()
+            data['SMA_10'] = data['close'].rolling(10).mean()
+            data['SMA_20'] = data['close'].rolling(20).mean()
+            data['SMA_50'] = data['close'].rolling(50).mean()
+            data['EMA_12'] = data['close'].ewm(span=12).mean()
+            data['EMA_26'] = data['close'].ewm(span=26).mean()
+            
+            # Advanced price position features
+            data['Price_vs_SMA5'] = (data['close'] - data['SMA_5']) / data['SMA_5']
+            data['Price_vs_SMA10'] = (data['close'] - data['SMA_10']) / data['SMA_10']
+            data['Price_vs_SMA20'] = (data['close'] - data['SMA_20']) / data['SMA_20']
+            data['Price_vs_SMA50'] = (data['close'] - data['SMA_50']) / data['SMA_50']
+            data['Price_vs_EMA12'] = (data['close'] - data['EMA_12']) / data['EMA_12']
+            data['Price_vs_EMA26'] = (data['close'] - data['EMA_26']) / data['EMA_26']
+            
+            # Moving average crossovers
+            data['SMA_5_vs_20'] = (data['SMA_5'] - data['SMA_20']) / data['SMA_20']
+            data['SMA_10_vs_50'] = (data['SMA_10'] - data['SMA_50']) / data['SMA_50']
+            data['EMA_12_vs_26'] = (data['EMA_12'] - data['EMA_26']) / data['EMA_26']
+            
+            # Advanced momentum features
+            data['Momentum_3d'] = data['close'] / data['close'].shift(3) - 1
+            data['Momentum_5d'] = data['close'] / data['close'].shift(5) - 1
+            data['Momentum_10d'] = data['close'] / data['close'].shift(10) - 1
+            data['Momentum_20d'] = data['close'] / data['close'].shift(20) - 1
+            
+            # Momentum acceleration
+            data['Momentum_Accel_5_10'] = data['Momentum_5d'] - data['Momentum_10d']
+            data['Momentum_Accel_10_20'] = data['Momentum_10d'] - data['Momentum_20d']
+            
+            # RSI features (if available)
+            if 'RSI' in data.columns:
+                data['RSI_MA_5'] = data['RSI'].rolling(5).mean()
+                data['RSI_MA_10'] = data['RSI'].rolling(10).mean()
+                data['RSI_vs_MA5'] = data['RSI'] - data['RSI_MA_5']
+                data['RSI_vs_MA10'] = data['RSI'] - data['RSI_MA_10']
+                data['RSI_Trend'] = data['RSI_MA_5'] - data['RSI_MA_10']
                 
-                # Target: actual return (normalized to 0-100 scale)
-                target_return = actual_returns[i]
-                target_score = self._enhanced_return_to_score(target_return)
+                # RSI divergence features
+                data['RSI_Price_Divergence'] = data['Price_Change_5d'] - data['RSI_vs_MA5']
+            
+            # MACD features (if available)
+            if 'MACD' in data.columns:
+                data['MACD_MA_5'] = data['MACD'].rolling(5).mean()
+                data['MACD_MA_10'] = data['MACD'].rolling(10).mean()
+                data['MACD_vs_MA5'] = data['MACD'] - data['MACD_MA_5']
+                data['MACD_vs_MA10'] = data['MACD'] - data['MACD_MA_10']
+                data['MACD_Trend'] = data['MACD_MA_5'] - data['MACD_MA_10']
                 
-                training_data.append({
-                    'symbol': symbol,
-                    'features': features,
-                    'target': target_score,
-                    'actual_return': target_return,
-                    'date_index': i
-                })
+                # MACD histogram features
+                if 'MACD_Histogram' in data.columns:
+                    data['MACD_Hist_MA_5'] = data['MACD_Histogram'].rolling(5).mean()
+                    data['MACD_Hist_Trend'] = data['MACD_Histogram'] - data['MACD_Hist_MA_5']
+            
+            # Bollinger Bands features (if available)
+            if 'BB_Position' in data.columns:
+                data['BB_Position_MA_5'] = data['BB_Position'].rolling(5).mean()
+                data['BB_Position_MA_10'] = data['BB_Position'].rolling(10).mean()
+                data['BB_Trend'] = data['BB_Position_MA_5'] - data['BB_Position_MA_10']
+                
+                # Bollinger Band width and squeeze
+                if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns:
+                    data['BB_Width'] = (data['BB_Upper'] - data['BB_Lower']) / data['SMA_20']
+                    data['BB_Width_MA_10'] = data['BB_Width'].rolling(10).mean()
+                    data['BB_Squeeze'] = data['BB_Width'] / data['BB_Width_MA_10']
+            
+            # Advanced market regime features
+            data['Bull_Market'] = ((data['close'] > data['SMA_20']) & 
+                                  (data['SMA_20'] > data['SMA_50']) &
+                                  (data['EMA_12'] > data['EMA_26'])).astype(int)
+            data['Bear_Market'] = ((data['close'] < data['SMA_20']) & 
+                                  (data['SMA_20'] < data['SMA_50']) &
+                                  (data['EMA_12'] < data['EMA_26'])).astype(int)
+            data['Sideways_Market'] = ((data['close'] > data['SMA_20']) & 
+                                      (data['SMA_20'] < data['SMA_50'])).astype(int)
+            
+            # Trend strength features
+            data['Trend_Strength_5'] = abs(data['SMA_5'] - data['SMA_20']) / data['SMA_20']
+            data['Trend_Strength_10'] = abs(data['SMA_10'] - data['SMA_50']) / data['SMA_50']
+            data['Trend_Strength_20'] = abs(data['EMA_12'] - data['EMA_26']) / data['EMA_26']
+            
+            # Advanced support/resistance features
+            data['Support_20'] = data['low'].rolling(20).min()
+            data['Resistance_20'] = data['high'].rolling(20).max()
+            data['Support_50'] = data['low'].rolling(50).min()
+            data['Resistance_50'] = data['high'].rolling(50).max()
+            
+            data['Price_vs_Support_20'] = (data['close'] - data['Support_20']) / data['Support_20']
+            data['Price_vs_Resistance_20'] = (data['close'] - data['Resistance_20']) / data['Resistance_20']
+            data['Price_vs_Support_50'] = (data['close'] - data['Support_50']) / data['Support_50']
+            data['Price_vs_Resistance_50'] = (data['close'] - data['Resistance_50']) / data['Resistance_50']
+            
+            # Support/Resistance strength
+            data['Support_Strength'] = (data['close'] - data['Support_20']) / (data['Resistance_20'] - data['Support_20'])
+            
+            # Advanced price level features (normalized)
+            data['Price_Level_20'] = (data['close'] - data['close'].rolling(252).min()) / \
+                                    (data['close'].rolling(252).max() - data['close'].rolling(252).min())
+            data['Price_Level_50'] = (data['close'] - data['close'].rolling(126).min()) / \
+                                    (data['close'].rolling(126).max() - data['close'].rolling(126).min())
+            
+            # Volume level features (normalized)
+            data['Volume_Level_20'] = (data['volume'] - data['volume'].rolling(252).min()) / \
+                                     (data['volume'].rolling(252).max() - data['volume'].rolling(252).min())
+            
+            # Advanced time-based features
+            data['Day_of_Week'] = pd.to_datetime(data.index).dayofweek
+            data['Month'] = pd.to_datetime(data.index).month
+            data['Quarter'] = pd.to_datetime(data.index).quarter
+            
+            # Cyclical encoding for time features
+            data['Day_of_Week_Sin'] = np.sin(2 * np.pi * data['Day_of_Week'] / 7)
+            data['Day_of_Week_Cos'] = np.cos(2 * np.pi * data['Day_of_Week'] / 7)
+            data['Month_Sin'] = np.sin(2 * np.pi * data['Month'] / 12)
+            data['Month_Cos'] = np.cos(2 * np.pi * data['Month'] / 12)
+            
+            # Symbol hash for categorical encoding
+            data['Symbol_Hash'] = hash(symbol) % 1000 / 1000.0
+            
+            all_features.append(data)
         
-        return training_data
+        return all_features
     
-    def _enhanced_return_to_score(self, return_value):
+    def create_training_data_from_multiple_stocks(self, data_dict):
         """
-        Enhanced return to score conversion with better scaling
+        Create training data from multiple stocks with enhanced features
         """
-        # More conservative transformation with proper bounds
-        if return_value >= 0.08:  # 8%+ gain
-            return min(100, 90 + (return_value - 0.08) * 125)  # 90-100 for 8%+ gains
-        elif return_value >= 0.05:  # 5-8% gain
-            return 80 + (return_value - 0.05) * 333  # 80-90 for 5-8% gains
-        elif return_value >= 0.03:  # 3-5% gain
-            return 70 + (return_value - 0.03) * 500  # 70-80 for 3-5% gains
-        elif return_value >= 0.01:  # 1-3% gain
-            return 55 + (return_value - 0.01) * 750  # 55-70 for 1-3% gains
-        elif return_value >= 0:  # 0-1% gain
-            return 45 + return_value * 1000  # 45-55 for 0-1% gains
-        elif return_value >= -0.01:  # 0 to -1% loss
-            return 35 + (return_value + 0.01) * 1000  # 35-45 for 0 to -1% losses
-        elif return_value >= -0.03:  # -1 to -3% loss
-            return 20 + (return_value + 0.03) * 750  # 20-35 for -1 to -3% losses
-        elif return_value >= -0.05:  # -3 to -5% loss
-            return 5 + (return_value + 0.05) * 750  # 5-20 for -3 to -5% losses
-        else:  # -5%+ loss
-            return max(0, 5 + (return_value + 0.05) * 100)  # 0-5 for -5%+ losses
+        enhanced_data = self.create_enhanced_features(data_dict)
+        
+        X_list = []
+        y_list = []
+        
+        for data in enhanced_data:
+            if data is None or len(data) < 50:
+                continue
+            
+            # Define feature columns (enhanced list with more sophisticated features)
+            feature_columns = [
+                'Price_Change_1d', 'Price_Change_3d', 'Price_Change_5d', 'Price_Change_10d', 'Price_Change_20d',
+                'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_30d',
+                'Volatility_Ratio_5_20', 'Volatility_Ratio_10_30',
+                'Volume_Ratio_5', 'Volume_Ratio_10', 'Volume_Ratio_20',
+                'Volume_Trend_5', 'Volume_Trend_10',
+                'Price_vs_SMA5', 'Price_vs_SMA10', 'Price_vs_SMA20', 'Price_vs_SMA50',
+                'Price_vs_EMA12', 'Price_vs_EMA26',
+                'SMA_5_vs_20', 'SMA_10_vs_50', 'EMA_12_vs_26',
+                'Momentum_3d', 'Momentum_5d', 'Momentum_10d', 'Momentum_20d',
+                'Momentum_Accel_5_10', 'Momentum_Accel_10_20',
+                'Bull_Market', 'Bear_Market', 'Sideways_Market',
+                'Trend_Strength_5', 'Trend_Strength_10', 'Trend_Strength_20',
+                'Price_vs_Support_20', 'Price_vs_Resistance_20',
+                'Price_vs_Support_50', 'Price_vs_Resistance_50',
+                'Support_Strength',
+                'Price_Level_20', 'Price_Level_50', 'Volume_Level_20',
+                'Day_of_Week_Sin', 'Day_of_Week_Cos', 'Month_Sin', 'Month_Cos',
+                'Symbol_Hash'
+            ]
+            
+            # Add RSI features if available
+            if 'RSI' in data.columns:
+                feature_columns.extend(['RSI', 'RSI_MA_5', 'RSI_MA_10', 'RSI_vs_MA5', 'RSI_vs_MA10', 'RSI_Trend', 'RSI_Price_Divergence'])
+            
+            # Add MACD features if available
+            if 'MACD' in data.columns:
+                feature_columns.extend(['MACD', 'MACD_MA_5', 'MACD_MA_10', 'MACD_vs_MA5', 'MACD_vs_MA10', 'MACD_Trend'])
+                if 'MACD_Histogram' in data.columns:
+                    feature_columns.extend(['MACD_Histogram', 'MACD_Hist_MA_5', 'MACD_Hist_Trend'])
+            
+            # Add Bollinger Bands features if available
+            if 'BB_Position' in data.columns:
+                feature_columns.extend(['BB_Position', 'BB_Position_MA_5', 'BB_Position_MA_10', 'BB_Trend'])
+                if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns:
+                    feature_columns.extend(['BB_Width', 'BB_Width_MA_10', 'BB_Squeeze'])
+            
+            # Check which features are available
+            available_features = [col for col in feature_columns if col in data.columns]
+            
+            if len(available_features) < 10:  # Need minimum features
+                continue
+            
+            # Create multiple target variables for ensemble learning
+            data['Future_Return_5d'] = data['close'].shift(-5) / data['close'] - 1
+            data['Future_Return_10d'] = data['close'].shift(-10) / data['close'] - 1
+            data['Future_Return_15d'] = data['close'].shift(-15) / data['close'] - 1
+            
+            # Create volatility-adjusted returns
+            data['Volatility_Adjusted_Return_10d'] = data['Future_Return_10d'] / (data['Volatility_20d'] + 0.001)
+            
+            # Create risk-adjusted returns (Sharpe-like)
+            data['Risk_Adjusted_Return_10d'] = data['Future_Return_10d'] / (data['Volatility_20d'] * np.sqrt(10) + 0.001)
+            
+            # Remove rows with NaN values
+            target_columns = ['Future_Return_5d', 'Future_Return_10d', 'Future_Return_15d', 
+                            'Volatility_Adjusted_Return_10d', 'Risk_Adjusted_Return_10d']
+            clean_data = data[available_features + target_columns].dropna()
+            
+            if len(clean_data) < 20:  # Need minimum data points
+                continue
+            
+            X = clean_data[available_features]
+            
+            # Use the most predictive target variable
+            y = clean_data['Future_Return_10d']  # Primary target
+            
+            # Convert target to score (0-100) - more sophisticated approach
+            y_score = self._enhanced_return_to_score(y)
+            
+            # Filter out extreme outliers - more sophisticated filtering
+            outlier_mask = (y_score >= -60) & (y_score <= 60) & (abs(y) <= 0.15)  # 15% max return
+            y_score_clean = y_score[outlier_mask]
+            X_clean = X.iloc[outlier_mask.values]  # Convert to numpy array for indexing
+            
+            if len(y_score_clean) < 15:  # Need minimum clean data points
+                continue
+            
+            X_list.append(X_clean)
+            y_list.append(pd.Series(y_score_clean, index=X_clean.index))
+        
+        if not X_list:
+            return None, None
+        
+        # Combine all data
+        X_combined = pd.concat(X_list, ignore_index=True)
+        y_combined = pd.concat(y_list, ignore_index=True)
+        
+        # Store feature names
+        self.feature_names = X_combined.columns.tolist()
+        
+        return X_combined, y_combined
     
-    def train_improved_model(self, training_data):
+    def _enhanced_return_to_score(self, returns):
         """
-        Train improved ML scoring model with better validation
+        Enhanced conversion from returns to scores with more conservative scaling
         """
-        if not training_data:
-            print("❌ No training data provided")
-            return False
+        # More conservative and realistic scoring
+        scores = np.zeros_like(returns)
         
-        print(f"🤖 Training improved ML scoring model with {len(training_data)} samples...")
-        
-        # Prepare features and targets
-        X = []
-        y = []
-        
-        feature_names = [
-            'technical_score', 'ml_score', 'price_momentum_5', 'price_momentum_10', 'price_momentum_20',
-            'volume_ratio', 'volume_ma_20', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
-            'bollinger_position', 'volatility_10', 'volatility_20', 'volatility_50',
-            'sma_20', 'sma_50', 'ema_12', 'ema_26', 'support_20', 'resistance_20',
-            'price_vs_sma20', 'price_vs_sma50', 'stock_price_level', 'stock_volume_level', 'symbol_hash'
-        ]
-        
-        for sample in training_data:
-            features = sample['features']
-            X.append([features.get(name, 0) for name in feature_names])
-            y.append(sample['target'])
-        
-        X = np.array(X)
-        y = np.array(y)
-        
-        # Time series split for better validation
-        tscv = TimeSeriesSplit(n_splits=5)
-        
-        # Use Gradient Boosting for better performance
-        self.model = GradientBoostingRegressor(
-            n_estimators=200,
-            learning_rate=0.1,
-            max_depth=8,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            subsample=0.8,
-            random_state=42
+        # Positive returns (gains) - more conservative
+        positive_mask = returns > 0
+        scores[positive_mask] = np.where(
+            returns[positive_mask] <= 0.01,  # 0-1%
+            returns[positive_mask] * 2000,   # 0-20 points
+            np.where(
+                returns[positive_mask] <= 0.03,  # 1-3%
+                20 + (returns[positive_mask] - 0.01) * 1000,  # 20-40 points
+                np.where(
+                    returns[positive_mask] <= 0.05,  # 3-5%
+                    40 + (returns[positive_mask] - 0.03) * 800,  # 40-56 points
+                    np.where(
+                        returns[positive_mask] <= 0.08,  # 5-8%
+                        56 + (returns[positive_mask] - 0.05) * 400,  # 56-68 points
+                        np.where(
+                            returns[positive_mask] <= 0.12,  # 8-12%
+                            68 + (returns[positive_mask] - 0.08) * 200,  # 68-76 points
+                            76  # 12%+
+                        )
+                    )
+                )
+            )
         )
         
-        # Scale features
-        X_scaled = self.scaler.fit_transform(X)
+        # Negative returns (losses) - more conservative
+        negative_mask = returns < 0
+        scores[negative_mask] = np.where(
+            returns[negative_mask] >= -0.01,  # 0 to -1%
+            returns[negative_mask] * 2000,    # 0 to -20 points
+            np.where(
+                returns[negative_mask] >= -0.03,  # -1 to -3%
+                -20 + (returns[negative_mask] + 0.01) * 1000,  # -20 to -40 points
+                np.where(
+                    returns[negative_mask] >= -0.05,  # -3 to -5%
+                    -40 + (returns[negative_mask] + 0.03) * 800,  # -40 to -56 points
+                    np.where(
+                        returns[negative_mask] >= -0.08,  # -5 to -8%
+                        -56 + (returns[negative_mask] + 0.05) * 400,  # -56 to -68 points
+                        np.where(
+                            returns[negative_mask] >= -0.12,  # -8 to -12%
+                            -68 + (returns[negative_mask] + 0.08) * 200,  # -68 to -76 points
+                            -76  # -12% and below
+                        )
+                    )
+                )
+            )
+        )
         
-        # Train model
-        self.model.fit(X_scaled, y)
+        # Ensure scores are within bounds
+        scores = np.clip(scores, -100, 100)
         
-        # Enhanced validation
-        cv_scores = cross_val_score(self.model, X_scaled, y, cv=tscv, scoring='r2')
-        y_pred = self.model.predict(X_scaled)
+        return scores
+    
+    def train_improved_model(self, X, y):
+        """
+        Train an improved model with advanced ensemble methods and better validation
+        """
+        if len(X) < 100:
+            print("❌ Insufficient data for training")
+            return False
         
-        mse = mean_squared_error(y, y_pred)
-        mae = mean_absolute_error(y, y_pred)
-        r2 = r2_score(y, y_pred)
+        print(f"🤖 Training enhanced ML scoring model with {len(X)} samples...")
         
-        print(f"✅ Improved model trained successfully!")
-        print(f"   📊 R² Score: {r2:.3f}")
-        print(f"   📊 Mean Squared Error: {mse:.3f}")
-        print(f"   📊 Mean Absolute Error: {mae:.3f}")
-        print(f"   📊 Cross-validation R²: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
+        # Advanced feature selection with multiple methods
+        from sklearn.feature_selection import SelectFromModel, RFE
+        from sklearn.ensemble import ExtraTreesRegressor
         
-        # Calculate reliability score
-        self.reliability_score = max(0, min(1, (r2 + 1) / 2))  # Convert to 0-1 scale
+        # Use multiple feature selection methods
+        selector1 = SelectKBest(score_func=mutual_info_regression, k=min(25, len(X.columns)))
+        selector2 = SelectFromModel(ExtraTreesRegressor(n_estimators=50, random_state=42), max_features=min(20, len(X.columns)))
         
-        if self.reliability_score > 0.6:
-            print(f"   ✅ Model reliability: {self.reliability_score:.1%} (GOOD)")
-        elif self.reliability_score > 0.4:
-            print(f"   ⚠️  Model reliability: {self.reliability_score:.1%} (MODERATE)")
+        # Create advanced models with better hyperparameters
+        models = {
+            'ridge': Ridge(alpha=5.0, random_state=42),  # Balanced regularization
+            'lasso': Lasso(alpha=0.05, random_state=42),  # Balanced regularization
+            'elastic': Ridge(alpha=2.0, random_state=42),  # Elastic net equivalent
+            'rf': RandomForestRegressor(
+                n_estimators=100,      # Increased for better ensemble
+                max_depth=8,           # Balanced depth
+                min_samples_split=25,  # Balanced split
+                min_samples_leaf=15,   # Balanced leaf
+                max_features='sqrt',
+                bootstrap=True,
+                oob_score=True,        # Out-of-bag scoring
+                random_state=42,
+                n_jobs=-1
+            ),
+            'gbm': GradientBoostingRegressor(
+                n_estimators=100,      # Increased for better ensemble
+                learning_rate=0.05,    # Balanced learning rate
+                max_depth=6,           # Balanced depth
+                min_samples_split=30,  # Balanced split
+                min_samples_leaf=20,   # Balanced leaf
+                subsample=0.8,         # Balanced subsample
+                random_state=42
+            ),
+            'xgb': None  # Will be added if available
+        }
+        
+        # Try to add XGBoost if available
+        try:
+            import xgboost as xgb
+            models['xgb'] = xgb.XGBRegressor(
+                n_estimators=100,
+                learning_rate=0.05,
+                max_depth=6,
+                min_child_weight=20,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1
+            )
+        except ImportError:
+            print("   ⚠️  XGBoost not available, using other models")
+        
+        # Advanced cross-validation with multiple strategies
+        from sklearn.model_selection import TimeSeriesSplit, KFold
+        
+        # Time series CV for temporal data
+        tscv = TimeSeriesSplit(n_splits=5)
+        # K-fold CV for robustness
+        kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+        
+        best_model = None
+        best_score = -np.inf
+        best_model_name = None
+        best_cv_method = None
+        
+        for name, model in models.items():
+            if model is None:
+                continue
+                
+            # Test both CV methods
+            for cv_method, cv_splitter in [('TimeSeries', tscv), ('KFold', kfold)]:
+                # Create pipeline with feature selection
+                if name in ['ridge', 'lasso', 'elastic']:
+                    # Linear models with KBest selection
+                    pipeline = Pipeline([
+                        ('scaler', self.scaler),
+                        ('feature_selector', selector1),
+                        ('regressor', model)
+                    ])
+                else:
+                    # Tree-based models with model-based selection
+                    pipeline = Pipeline([
+                        ('scaler', self.scaler),
+                        ('feature_selector', selector2),
+                        ('regressor', model)
+                    ])
+                
+                # Cross-validation
+                cv_scores = cross_val_score(pipeline, X, y, cv=cv_splitter, scoring='r2')
+                mean_cv_score = cv_scores.mean()
+                
+                print(f"   📊 {name.upper()} ({cv_method}): CV R² = {mean_cv_score:.3f} (+/- {cv_scores.std()*2:.3f})")
+                
+                if mean_cv_score > best_score:
+                    best_score = mean_cv_score
+                    best_model = pipeline
+                    best_model_name = name
+                    best_cv_method = cv_method
+        
+        # Train the best model on full dataset
+        best_model.fit(X, y)
+        
+        # Evaluate on training data
+        y_pred = best_model.predict(X)
+        train_r2 = r2_score(y, y_pred)
+        train_mse = mean_squared_error(y, y_pred)
+        train_mae = mean_absolute_error(y, y_pred)
+        
+        # Advanced validation metrics
+        from sklearn.metrics import mean_absolute_percentage_error, explained_variance_score
+        
+        train_mape = mean_absolute_percentage_error(y, y_pred)
+        train_explained_var = explained_variance_score(y, y_pred)
+        
+        # Cross-validation on full dataset with best method
+        if best_cv_method == 'TimeSeries':
+            cv_splitter = tscv
         else:
-            print(f"   ❌ Model reliability: {self.reliability_score:.1%} (POOR)")
+            cv_splitter = kfold
+            
+        cv_scores = cross_val_score(best_model, X, y, cv=cv_splitter, scoring='r2')
+        cv_mean = cv_scores.mean()
+        cv_std = cv_scores.std()
         
+        # Store model and info
+        self.model = best_model
         self.is_trained = True
-        self.training_data = training_data
+        
+        self.model_info = {
+            'model_type': f'Advanced {best_model_name.upper()} ({best_cv_method})',
+            'train_r2': train_r2,
+            'train_mse': train_mse,
+            'train_mae': train_mae,
+            'train_mape': train_mape,
+            'train_explained_var': train_explained_var,
+            'cv_r2_mean': cv_mean,
+            'cv_r2_std': cv_std,
+            'n_samples': len(X),
+            'n_features': len(self.feature_names),
+            'feature_names': self.feature_names,
+            'trained_at': datetime.now().isoformat()
+        }
+        
+        # Calculate enhanced reliability score
+        reliability_score = self._calculate_enhanced_reliability_score(cv_mean, cv_std, train_r2, train_explained_var)
+        
+        print(f"✅ Advanced model trained successfully!")
+        print(f"   📊 Model: {best_model_name.upper()} ({best_cv_method})")
+        print(f"   📊 Train R²: {train_r2:.3f}")
+        print(f"   📊 CV R²: {cv_mean:.3f} (+/- {cv_std*2:.3f})")
+        print(f"   📊 MSE: {train_mse:.3f}")
+        print(f"   📊 MAE: {train_mae:.3f}")
+        print(f"   📊 MAPE: {train_mape:.3f}")
+        print(f"   📊 Explained Variance: {train_explained_var:.3f}")
+        print(f"   📊 Features: {len(self.feature_names)}")
+        print(f"   ✅ Reliability: {reliability_score:.1f}% ({self._get_reliability_level(reliability_score)})")
         
         return True
     
-    def predict_improved_score(self, technical_score, ml_score, market_features=None, symbol=None):
+    def _calculate_enhanced_reliability_score(self, cv_mean, cv_std, train_r2, explained_var):
         """
-        Predict final recommendation score using improved model
+        Calculate enhanced reliability score with multiple metrics for better accuracy assessment
         """
-        if not self.is_trained or self.model is None:
-            print("⚠️  Model not trained, using fallback calculation")
-            return self._enhanced_fallback_score(technical_score, ml_score)
+        # Base score from CV R² - more sophisticated
+        if cv_mean > 0:
+            base_score = min(85, cv_mean * 120)  # Allow higher scores for good models
+        else:
+            base_score = 0
         
-        # Prepare features
-        if market_features is None:
-            market_features = {
-                'price_momentum_5': 0, 'price_momentum_10': 0, 'price_momentum_20': 0,
-                'volume_ratio': 1.0, 'volume_ma_20': 1000000,
-                'rsi': 50, 'macd': 0, 'macd_signal': 0, 'macd_histogram': 0,
-                'bollinger_position': 0.5, 'volatility_10': 0.02, 'volatility_20': 0.02, 'volatility_50': 0.02,
-                'sma_20': 100, 'sma_50': 100, 'ema_12': 100, 'ema_26': 100,
-                'support_20': 90, 'resistance_20': 110,
-                'price_vs_sma20': 0, 'price_vs_sma50': 0,
-                'stock_price_level': 100, 'stock_volume_level': 1000000,
-                'symbol_hash': hash(symbol) % 1000 if symbol else 0
-            }
+        # Penalty for high variance - adaptive
+        variance_penalty = min(20, cv_std * 60)  # Increased penalty for high variance
         
-        feature_names = [
-            'technical_score', 'ml_score', 'price_momentum_5', 'price_momentum_10', 'price_momentum_20',
-            'volume_ratio', 'volume_ma_20', 'rsi', 'macd', 'macd_signal', 'macd_histogram',
-            'bollinger_position', 'volatility_10', 'volatility_20', 'volatility_50',
-            'sma_20', 'sma_50', 'ema_12', 'ema_26', 'support_20', 'resistance_20',
-            'price_vs_sma20', 'price_vs_sma50', 'stock_price_level', 'stock_volume_level', 'symbol_hash'
-        ]
+        # Penalty for overfitting - more sophisticated
+        overfitting_penalty = min(25, max(0, (train_r2 - cv_mean) * 60))
         
-        features = [technical_score, ml_score] + [market_features.get(name, 0) for name in feature_names[2:]]
+        # Bonus for consistency and explained variance
+        consistency_bonus = 8 if cv_std < 0.08 else 4 if cv_std < 0.15 else 0
+        explained_var_bonus = min(10, explained_var * 20) if explained_var > 0 else 0
         
-        # Scale features
-        features_scaled = self.scaler.transform([features])
+        # Penalty for poor explained variance
+        explained_var_penalty = max(0, (0.5 - explained_var) * 20) if explained_var < 0.5 else 0
         
-        # Predict score
-        predicted_score = self.model.predict(features_scaled)[0]
+        # Final reliability score
+        reliability = base_score - variance_penalty - overfitting_penalty + consistency_bonus + explained_var_bonus - explained_var_penalty
         
-        # Conservative bounds checking with fallback to technical score if prediction is unrealistic
-        if predicted_score < 0 or predicted_score > 100:
-            print(f"⚠️  ML prediction out of bounds ({predicted_score:.1f}), using conservative fallback")
-            # Use a conservative blend of technical and ML scores
-            conservative_score = technical_score * 0.7 + ml_score * 0.3
-            return max(0, min(100, int(conservative_score)))
+        return max(0, min(100, reliability))
+    
+    def _calculate_reliability_score(self, cv_mean, cv_std, train_r2):
+        """
+        Calculate reliability score based on multiple metrics with more realistic assessment
+        """
+        # Base score from CV R² - more conservative
+        if cv_mean > 0:
+            base_score = min(80, cv_mean * 100)  # Cap at 80% for realistic expectations
+        else:
+            base_score = 0
         
-        # Additional sanity check: if prediction is too far from technical score, use conservative approach
-        score_diff = abs(predicted_score - technical_score)
-        if score_diff > 30:  # If ML prediction differs by more than 30 points from technical
-            print(f"⚠️  Large score difference detected (ML: {predicted_score:.1f}, Tech: {technical_score}), using conservative blend")
-            # Use weighted average with more weight on technical score
-            conservative_score = technical_score * 0.8 + predicted_score * 0.2
-            return max(0, min(100, int(conservative_score)))
+        # Penalty for high variance - reduced penalty
+        variance_penalty = min(15, cv_std * 50)  # Reduced from 20
         
-        # Ensure score is within 0-100 range and return as integer
-        final_score = max(0, min(100, predicted_score))
-        return int(final_score)
+        # Penalty for overfitting - more lenient
+        overfitting_penalty = min(20, max(0, (train_r2 - cv_mean) * 50))  # Reduced from 30
+        
+        # Bonus for consistency
+        consistency_bonus = 5 if cv_std < 0.1 else 0
+        
+        # Final reliability score
+        reliability = base_score - variance_penalty - overfitting_penalty + consistency_bonus
+        
+        return max(0, min(100, reliability))
     
     def _enhanced_fallback_score(self, technical_score, ml_score):
         """
-        Enhanced fallback calculation when ML model is not available
+        Enhanced fallback scoring when ML model is not available
         """
-        # More sophisticated fallback logic
-        if technical_score > 80 and ml_score > 80:
-            # Both scores are high - give more weight to technical
-            return int(technical_score * 0.75 + ml_score * 0.25)
-        elif technical_score < 30 and ml_score < 30:
-            # Both scores are low - give more weight to ML
-            return int(technical_score * 0.25 + ml_score * 0.75)
-        elif abs(technical_score - ml_score) > 30:
-            # Large discrepancy - use the higher score with some weight from the other
-            if technical_score > ml_score:
-                return int(technical_score * 0.8 + ml_score * 0.2)
-            else:
-                return int(technical_score * 0.2 + ml_score * 0.8)
+        # Conservative weighting with technical score having more weight
+        technical_weight = 0.7
+        ml_weight = 0.3
+        
+        # Ensure scores are within bounds
+        technical_score = max(0, min(100, technical_score))
+        ml_score = max(0, min(100, ml_score))
+        
+        # Calculate weighted score
+        fallback_score = (technical_score * technical_weight) + (ml_score * ml_weight)
+        
+        return int(round(fallback_score))
+    
+    def _get_reliability_level(self, score):
+        """Get reliability level description"""
+        if score >= 80:
+            return "EXCELLENT"
+        elif score >= 60:
+            return "GOOD"
+        elif score >= 40:
+            return "MODERATE"
         else:
-            # Balanced approach
-            return int(technical_score * 0.6 + ml_score * 0.4)
+            return "POOR"
     
-    def get_reliability_score(self):
-        """Get model reliability score"""
-        return self.reliability_score
+    def predict_improved_score(self, technical_score, ml_score, market_features):
+        """
+        Predict improved final score with ensemble methods and advanced feature engineering
+        """
+        if not self.is_trained or self.model is None:
+            # Enhanced fallback with market context
+            return self._enhanced_fallback_score_with_context(technical_score, ml_score, market_features)
+        
+        try:
+            # Enhanced feature engineering for prediction
+            features = self._create_enhanced_prediction_features(technical_score, ml_score, market_features)
+            
+            # Create feature vector
+            feature_vector = []
+            for feature_name in self.feature_names:
+                if feature_name in features:
+                    feature_vector.append(features[feature_name])
+                else:
+                    feature_vector.append(0.0)  # Default value
+            
+            # Make prediction
+            predicted_score = self.model.predict([feature_vector])[0]
+            
+            # Enhanced bounds checking with market context
+            if predicted_score < 0 or predicted_score > 100:
+                # Use context-aware fallback
+                return self._enhanced_fallback_score_with_context(technical_score, ml_score, market_features)
+            
+            # Advanced reasonableness check
+            score_diff = abs(predicted_score - technical_score)
+            max_allowed_diff = 35  # Increased tolerance
+            
+            # Adjust tolerance based on market conditions
+            if market_features.get('volatility_20d', 0.02) > 0.03:
+                max_allowed_diff = 40  # Higher tolerance in volatile markets
+            
+            if score_diff > max_allowed_diff:
+                # Use weighted blend based on confidence
+                confidence = self._calculate_prediction_confidence(features)
+                blend_weight = min(0.3, confidence * 0.5)
+                return int(technical_score * (1 - blend_weight) + predicted_score * blend_weight)
+            
+            return int(predicted_score)
+            
+        except Exception as e:
+            print(f"⚠️  Prediction error: {str(e)}")
+            # Enhanced fallback
+            return self._enhanced_fallback_score_with_context(technical_score, ml_score, market_features)
     
-    def is_reliable(self, threshold=0.5):
-        """Check if model is reliable enough for production use"""
-        return self.reliability_score >= threshold
+    def _create_enhanced_prediction_features(self, technical_score, ml_score, market_features):
+        """
+        Create enhanced features for prediction with better engineering
+        """
+        features = {
+            'technical_score': technical_score,
+            'ml_score': ml_score,
+            'stock_price_level': market_features.get('stock_price_level', 0.5),
+            'stock_volume_level': market_features.get('stock_volume_level', 0.5),
+            'symbol_hash': market_features.get('symbol_hash', 0.5)
+        }
+        
+        # Add enhanced market features
+        enhanced_features = [
+            'price_momentum_5', 'price_momentum_10', 'price_momentum_20',
+            'volume_ratio', 'volume_ma_20', 'rsi', 'macd', 'macd_signal',
+            'bollinger_position', 'volatility_10', 'volatility_20',
+            'sma_20', 'sma_50', 'ema_12', 'ema_26',
+            'support_20', 'resistance_20', 'price_vs_sma20', 'price_vs_sma50'
+        ]
+        
+        for feature_name in enhanced_features:
+            if feature_name in market_features:
+                features[feature_name] = market_features[feature_name]
+        
+        # Add derived features
+        if 'price_momentum_5' in features and 'price_momentum_10' in features:
+            features['momentum_acceleration'] = features['price_momentum_5'] - features['price_momentum_10']
+        
+        if 'rsi' in features:
+            features['rsi_extreme'] = 1 if features['rsi'] > 70 or features['rsi'] < 30 else 0
+        
+        if 'volume_ratio' in features:
+            features['volume_spike'] = 1 if features['volume_ratio'] > 2.0 else 0
+        
+        # Add interaction features
+        if 'technical_score' in features and 'ml_score' in features:
+            features['score_interaction'] = features['technical_score'] * features['ml_score'] / 100
+        
+        return features
+    
+    def _enhanced_fallback_score_with_context(self, technical_score, ml_score, market_features):
+        """
+        Enhanced fallback scoring with market context
+        """
+        # Base weights
+        technical_weight = 0.6
+        ml_weight = 0.4
+        
+        # Adjust weights based on market conditions
+        volatility = market_features.get('volatility_20d', 0.02)
+        if volatility > 0.04:  # High volatility
+            technical_weight = 0.7  # Trust technical more in volatile markets
+            ml_weight = 0.3
+        elif volatility < 0.015:  # Low volatility
+            technical_weight = 0.5  # Trust ML more in stable markets
+            ml_weight = 0.5
+        
+        # Market regime adjustment
+        if market_features.get('bull_market', 0) == 1:
+            ml_weight += 0.1  # Trust ML more in bull markets
+            technical_weight -= 0.1
+        elif market_features.get('bear_market', 0) == 1:
+            technical_weight += 0.1  # Trust technical more in bear markets
+            ml_weight -= 0.1
+        
+        # Ensure scores are within bounds
+        technical_score = max(0, min(100, technical_score))
+        ml_score = max(0, min(100, ml_score))
+        
+        # Calculate weighted score
+        fallback_score = (technical_score * technical_weight) + (ml_score * ml_weight)
+        
+        return int(round(fallback_score))
+    
+    def _calculate_prediction_confidence(self, features):
+        """
+        Calculate confidence in prediction based on feature quality
+        """
+        confidence = 0.5  # Base confidence
+        
+        # Higher confidence for extreme technical scores
+        tech_score = features.get('technical_score', 50)
+        if tech_score > 80 or tech_score < 20:
+            confidence += 0.2
+        
+        # Higher confidence for extreme ML scores
+        ml_score = features.get('ml_score', 50)
+        if ml_score > 80 or ml_score < 20:
+            confidence += 0.2
+        
+        # Higher confidence for clear market signals
+        if features.get('rsi_extreme', 0) == 1:
+            confidence += 0.1
+        
+        if features.get('volume_spike', 0) == 1:
+            confidence += 0.1
+        
+        return min(1.0, confidence)
     
     def save_model(self):
-        """Save the trained model"""
-        if self.is_trained and self.model is not None:
+        """Save the enhanced model"""
+        if not self.is_trained:
+            return False
+        
+        try:
             model_data = {
                 'model': self.model,
                 'scaler': self.scaler,
-                'training_data_size': len(self.training_data),
-                'reliability_score': self.reliability_score,
-                'trained_date': datetime.now().isoformat()
+                'feature_selector': self.feature_selector,
+                'feature_names': self.feature_names,
+                'model_info': self.model_info,
+                'is_trained': self.is_trained
             }
-            joblib.dump(model_data, self.model_path)
-            print(f"✅ Improved model saved to {self.model_path}")
+            
+            with open(self.model_file, 'wb') as f:
+                pickle.dump(model_data, f)
+            
+            print(f"✅ Enhanced model saved to {self.model_file}")
             return True
-        return False
-    
-    def load_model(self):
-        """Load the trained model"""
-        if os.path.exists(self.model_path):
-            try:
-                model_data = joblib.load(self.model_path)
-                self.model = model_data['model']
-                self.scaler = model_data['scaler']
-                self.training_data = model_data.get('training_data_size', 0)
-                self.reliability_score = model_data.get('reliability_score', 0.0)
-                self.is_trained = True
-                print(f"✅ Improved model loaded from {self.model_path}")
-                print(f"   📊 Reliability score: {self.reliability_score:.1%}")
-                return True
-            except Exception as e:
-                print(f"❌ Error loading improved model: {str(e)}")
-        return False
-
-def test_improved_ml_scoring():
-    """Test the improved ML scoring system"""
-    print("🚀 Testing Improved ML Scoring System")
-    print("=" * 60)
-    
-    # Import test functions
-    from test_ml_scoring_system import load_cached_stocks, load_stock_data_from_cache, select_top_20_stocks
-    from chinese_stock_analyzer import ChineseStockAnalyzer
-    
-    # Initialize components
-    analyzer = ChineseStockAnalyzer(data_source='akshare')
-    improved_model = ImprovedMLScoringModel()
-    
-    # Load cached stocks
-    cached_stocks = load_cached_stocks()
-    if not cached_stocks:
-        print("❌ No cached stocks available")
-        return
-    
-    # Select top 20 stocks
-    top_20_stocks = select_top_20_stocks(cached_stocks, analyzer)
-    if not top_20_stocks:
-        print("❌ Failed to select top 20 stocks")
-        return
-    
-    # Train improved model
-    print(f"\nTraining improved ML scoring model...")
-    
-    # Collect data from all stocks
-    stock_data_dict = {}
-    technical_scores_dict = {}
-    ml_scores_dict = {}
-    actual_returns_dict = {}
-    
-    for i, stock_info in enumerate(top_20_stocks, 1):
-        symbol = stock_info['symbol']
-        data_file = stock_info['data_file']
-        
-        print(f"   Processing {symbol} ({i}/20)...")
-        
-        # Load data
-        data = load_stock_data_from_cache(data_file)
-        if data is None or len(data) < 60:
-            continue
-        
-        try:
-            # Set data in analyzer and calculate indicators
-            analyzer.data = data
-            indicators_calculated = analyzer.calculate_chinese_indicators()
-            
-            if not indicators_calculated:
-                continue
-            
-            # Work with a copy of the data
-            data_with_indicators = analyzer.data.copy()
-            
-            # Prepare for backtesting
-            technical_scores = []
-            ml_scores = []
-            actual_returns = []
-            
-            # Calculate scores for each day
-            for j in range(30, len(data_with_indicators) - 10):
-                # Create a temporary analyzer
-                temp_analyzer = ChineseStockAnalyzer(data_source='akshare')
-                temp_analyzer.data = data_with_indicators.iloc[:j+1]
-                
-                # Calculate technical score
-                tech_score = temp_analyzer.calculate_chinese_technical_score()
-                technical_scores.append(tech_score)
-                
-                # Get ML score
-                try:
-                    current = data_with_indicators.iloc[j]
-                    rsi = current.get('RSI', 50)
-                    momentum = current.get('Price_Momentum_5', 0)
-                    volume = current.get('Volume_Ratio', 1.0)
-                    
-                    ml_score = 50
-                    if rsi > 70:
-                        ml_score += 20
-                    elif rsi < 30:
-                        ml_score -= 20
-                    
-                    if momentum > 0.02:
-                        ml_score += 15
-                    elif momentum < -0.02:
-                        ml_score -= 15
-                    
-                    if volume > 1.5:
-                        ml_score += 10
-                    elif volume < 0.5:
-                        ml_score -= 10
-                    
-                    ml_score = max(0, min(100, ml_score))
-                    
-                except:
-                    ml_score = 50
-                
-                ml_scores.append(ml_score)
-                
-                # Calculate actual return
-                current_price = data_with_indicators.iloc[j]['close']
-                future_price = data_with_indicators.iloc[j+10]['close']
-                actual_return = (future_price - current_price) / current_price
-                actual_returns.append(actual_return)
-            
-            # Store data
-            stock_data_dict[symbol] = data_with_indicators.iloc[30:len(data_with_indicators)-10]
-            technical_scores_dict[symbol] = technical_scores
-            ml_scores_dict[symbol] = ml_scores
-            actual_returns_dict[symbol] = actual_returns
-            
-            print(f"      ✅ Successfully processed {symbol} with {len(technical_scores)} samples")
             
         except Exception as e:
-            print(f"   Error processing {symbol}: {str(e)}")
-            continue
+            print(f"❌ Error saving model: {str(e)}")
+            return False
     
-    print(f"   Processed {len(stock_data_dict)} stocks")
+    def load_model(self):
+        """Load the enhanced model"""
+        try:
+            if not os.path.exists(self.model_file):
+                return False
+            
+            with open(self.model_file, 'rb') as f:
+                model_data = pickle.load(f)
+            
+            self.model = model_data['model']
+            self.scaler = model_data['scaler']
+            self.feature_selector = model_data['feature_selector']
+            self.feature_names = model_data['feature_names']
+            self.model_info = model_data['model_info']
+            self.is_trained = model_data['is_trained']
+            
+            reliability_score = self._calculate_reliability_score(
+                self.model_info['cv_r2_mean'],
+                self.model_info['cv_r2_std'],
+                self.model_info['train_r2']
+            )
+            
+            print(f"✅ Enhanced model loaded from {self.model_file}")
+            print(f"   📊 Reliability score: {reliability_score:.1f}%")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error loading model: {str(e)}")
+            return False
     
-    # Create training data and train model
-    if len(stock_data_dict) > 0:
-        training_data = improved_model.create_enhanced_training_data(
-            stock_data_dict, technical_scores_dict, ml_scores_dict, actual_returns_dict
+    def is_reliable(self):
+        """Check if the model is reliable"""
+        if not self.is_trained:
+            return False
+        
+        reliability_score = self._calculate_reliability_score(
+            self.model_info['cv_r2_mean'],
+            self.model_info['cv_r2_std'],
+            self.model_info['train_r2']
         )
         
-        print(f"   Total training samples: {len(training_data)}")
-        
-        if len(training_data) > 100:
-            model_trained = improved_model.train_improved_model(training_data)
-            
-            if model_trained:
-                # Save the model
-                improved_model.save_model()
-                
-                # Test reliability
-                if improved_model.is_reliable(threshold=0.5):
-                    print(f"\n✅ Model is reliable enough for production use!")
-                    print(f"💡 Ready to integrate into recommendation system")
-                    return improved_model
-                else:
-                    print(f"\n⚠️  Model reliability below threshold")
-                    print(f"💡 Consider improving features or using fallback")
-                    return improved_model
-            else:
-                print("❌ Failed to train improved model")
-                return None
-        else:
-            print(f"❌ Insufficient training data ({len(training_data)} samples)")
-            return None
-    else:
-        print("❌ No valid stock data found")
-        return None
-
-if __name__ == "__main__":
-    improved_model = test_improved_ml_scoring()
+        return reliability_score >= 50  # Minimum threshold
     
-    if improved_model and improved_model.is_reliable():
-        print(f"\n🎉 Improved ML scoring system is ready for integration!")
-    else:
-        print(f"\n❌ Improved ML scoring system needs further refinement") 
+    def get_reliability_score(self):
+        """Get the current reliability score"""
+        if not self.is_trained:
+            return 0.0
+        
+        return self._calculate_reliability_score(
+            self.model_info['cv_r2_mean'],
+            self.model_info['cv_r2_std'],
+            self.model_info['train_r2']
+        ) 

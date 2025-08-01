@@ -788,7 +788,7 @@ class ChineseStockRecommender:
                 # Use improved ML scoring model for final score
                 if self.ml_scoring_model.is_trained and self.ml_scoring_model.is_reliable():
                     final_score = self.ml_scoring_model.predict_improved_score(
-                        pre_result['technical_score'], pre_result['ml_score'], market_features, symbol
+                        pre_result['technical_score'], pre_result['ml_score'], market_features
                     )
                     # Check if model was recently retrained (within this session)
                     if hasattr(self, '_model_retrained') and self._model_retrained:
@@ -1349,14 +1349,20 @@ class ChineseStockRecommender:
         
         # Retrain the ML model with collected data
         if len(stock_data_dict) > 0:
-            training_data = self.ml_scoring_model.create_enhanced_training_data(
+            training_result = self.ml_scoring_model.create_enhanced_training_data(
                 stock_data_dict, technical_scores_dict, ml_scores_dict, actual_returns_dict
             )
             
-            print(f"   📊 Total training samples: {len(training_data)}")
+            if training_result is None or training_result[0] is None:
+                print(f"   ⚠️  Failed to create training data, using existing model")
+                self._model_retrained = False
+                return False
             
-            if len(training_data) > 100:
-                model_trained = self.ml_scoring_model.train_improved_model(training_data)
+            X, y = training_result
+            print(f"   📊 Total training samples: {len(X)}")
+            
+            if len(X) > 100:
+                model_trained = self.ml_scoring_model.train_improved_model(X, y)
                 
                 if model_trained:
                     print(f"   ✅ ML model retrained successfully!")
@@ -1371,7 +1377,7 @@ class ChineseStockRecommender:
                     self._model_retrained = False # Set flag for existing model
                     return False
             else:
-                print(f"   ⚠️  Insufficient training data ({len(training_data)} samples), using existing model")
+                print(f"   ⚠️  Insufficient training data ({len(X)} samples), using existing model")
                 self._model_retrained = False # Set flag for existing model
                 return False
         else:
