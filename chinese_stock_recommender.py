@@ -84,7 +84,13 @@ class ChineseStockRecommender:
             '688008', '688009', '688012', '688036', '688047', '688082', '688111', '688126', '688169',
             '688187', '688223', '688271', '688303', '688396', '688472', '688506', '688599', '688981'
         ]
-        
+        try:
+            import akshare as ak
+            bse_stock_list_df = ak.stock_info_bj_name_code()
+            self.a500_symbols = bse_stock_list_df["证券代码"]
+        except Exception as e:
+            print(f"Failed to download stock list: {e}")
+
         # Remove duplicates while preserving order
         self.a500_symbols = list(dict.fromkeys(self.a500_symbols))
         
@@ -119,9 +125,7 @@ class ChineseStockRecommender:
     
     def download_stock_data(self, symbol, market='A', period="1mo"):
         """Download stock data with cache support"""
-        # Add delay to avoid server resistance
-        time.sleep(0.3)
-        
+     
         # Check if download failed recently
         if self.cache.is_failed_download(symbol, market):
             print(f"⏭️  Skipping {symbol} ({market}-shares) - recent download failed")
@@ -131,6 +135,9 @@ class ChineseStockRecommender:
         cached_data = self.cache.get_cached_stock_data(symbol, market, period)
         if cached_data is not None:
             return cached_data
+        
+        # Add delay to avoid server resistance
+        time.sleep(0.3)
         
         try:
             # Use the new downloader

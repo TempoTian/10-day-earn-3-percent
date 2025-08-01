@@ -8,6 +8,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import random
 import warnings
 import time
 
@@ -21,45 +22,12 @@ class ChineseStockDownloader:
         """
         self.data_source = data_source.lower()
         self.stock_names_cache = {}
-        
-        # Chinese stock name mapping for common stocks
-        self.chinese_names = {
-            '688018': '乐鑫科技',
-            '000001': '平安银行',
-            '600519': '贵州茅台',
-            '000002': '万科A',
-            '000858': '五粮液',
-            '002415': '海康威视',
-            '600036': '招商银行',
-            '000725': '京东方A',
-            '002594': '比亚迪',
-            '600276': '恒瑞医药',
-            '000063': '中兴通讯',
-            '002230': '科大讯飞',
-            '300059': '东方财富',
-            '600887': '伊利股份',
-            '000568': '泸州老窖',
-            '002475': '立讯精密',
-            '600030': '中信证券',
-            '000166': '申万宏源',
-            '600585': '海螺水泥',
-            '000338': '潍柴动力',
-            '002142': '宁波银行',
-            '600104': '上汽集团',
-            '000895': '双汇发展',
-            '002304': '洋河股份',
-            '600009': '上海机场'
-        }
-        
-        # Try to import akshare if needed
-        if self.data_source == 'akshare':
-            try:
-                import akshare as ak
-                self.ak = ak
-                print("✅ akshare imported successfully")
-            except ImportError:
-                print("❌ akshare not available, falling back to yfinance")
-                self.data_source = 'yfinance'
+        try:
+            import akshare as ak
+            self.ak = ak
+        except ImportError:
+            print("❌ akshare not available, falling back to yfinance")
+            self.data_source = 'yfinance'
     
     def get_chinese_stock_symbol(self, symbol, market='A'):
         """Convert Chinese stock symbol to appropriate format"""
@@ -89,12 +57,13 @@ class ChineseStockDownloader:
         if cache_key in self.stock_names_cache:
             return self.stock_names_cache[cache_key]
         
-        # First check our Chinese name mapping
-        if symbol in self.chinese_names:
-            stock_name = self.chinese_names[symbol]
+        if self.ak:
+            stock_info = self.ak.stock_individual_info_em(symbol=symbol)
+            # 查看股票简称（名称）
+            stock_name = stock_info.loc[stock_info["item"] == "股票简称", "value"].values[0]
             self.stock_names_cache[cache_key] = stock_name
             return stock_name
-        
+                        
         try:
             if self.data_source == 'yfinance':
                 # Try to get stock abbreviation from yfinance
@@ -193,7 +162,7 @@ class ChineseStockDownloader:
         """Download stock data using akshare"""
         try:
             # Add delay to avoid server resistance
-            time.sleep(0.5)
+            time.sleep(random.uniform(1.2, 2.5))
             
             print(f"📥 Downloading {symbol} ({market}-shares) with akshare")
             
