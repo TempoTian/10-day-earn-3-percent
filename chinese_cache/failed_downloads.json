@@ -1,1 +1,50 @@
-{}
+{
+  "001289_A": {
+    "symbol": "001289",
+    "market": "A",
+    "timestamp": "2026-02-28T11:03:28.660761",
+    "error": "No data available"
+  },
+  "001391_A": {
+    "symbol": "001391",
+    "market": "A",
+    "timestamp": "2026-02-28T11:03:30.169840",
+    "error": "No data available"
+  },
+  "001965_A": {
+    "symbol": "001965",
+    "market": "A",
+    "timestamp": "2026-02-28T11:03:31.553138",
+    "error": "No data available"
+  },
+  "001979_A": {
+    "symbol": "001979",
+    "market": "A",
+    "timestamp": "2026-02-28T11:03:32.825806",
+    "error": "No data available"
+  },
+  "003816_A": {
+    "symbol": "003816",
+    "market": "A",
+    "timestamp": "2026-02-28T11:04:08.648203",
+    "error": "No data available"
+  },
+  "301236_A": {
+    "symbol": "301236",
+    "market": "A",
+    "timestamp": "2026-02-28T11:04:35.756288",
+    "error": "No data available"
+  },
+  "302132_A": {
+    "symbol": "302132",
+    "market": "A",
+    "timestamp": "2026-02-28T11:04:36.997442",
+    "error": "No data available"
+  },
+  "601989_A": {
+    "symbol": "601989",
+    "market": "A",
+    "timestamp": "2026-02-28T11:07:01.286783",
+    "error": "No data available"
+  }
+}

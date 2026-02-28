@@ -557,9 +557,9 @@ class ChineseStockRecommender:
             if i % 10 == 0:
                 time.sleep(1.0)
             
-            # Download 1-month data for initial screening
-            data = self.download_stock_data(symbol, 'A', "1mo")
-            if data is None or len(data) < 20:
+            # Download 3-month data for screening (strategies need SMA_50 which requires 50+ days)
+            data = self.download_stock_data(symbol, 'A', "3mo")
+            if data is None or len(data) < 50:
                 filtered_out += 1
                 continue
             
