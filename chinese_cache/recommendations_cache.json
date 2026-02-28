@@ -1,0 +1,624 @@
+{
+  "5": {
+    "strategy_type": "5",
+    "timestamp": "2026-02-28T11:07:37.235413",
+    "recommendations": [
+      {
+        "symbol": "600010",
+        "market": "A",
+        "score": 75,
+        "reasons": [
+          "High volume breakout",
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 3.240000009536743,
+        "volume_ratio": 2.6658843025516,
+        "momentum_5d": 0.2089551973247301,
+        "rsi": 77.86258722295224
+      },
+      {
+        "symbol": "600233",
+        "market": "A",
+        "score": 60,
+        "reasons": [
+          "High volume breakout",
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 19.610000610351562,
+        "volume_ratio": 3.2635245156929664,
+        "momentum_5d": 0.08402434742634468,
+        "rsi": 81.81820606928257
+      },
+      {
+        "symbol": "000708",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 18.030000686645508,
+        "volume_ratio": 1.6893979572128044,
+        "momentum_5d": 0.13396233454200068,
+        "rsi": 61.961368971553874
+      },
+      {
+        "symbol": "000792",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 38.20000076293945,
+        "volume_ratio": 1.236598083317145,
+        "momentum_5d": 0.12319913696536045,
+        "rsi": 71.68002116700511
+      },
+      {
+        "symbol": "002460",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 73.0999984741211,
+        "volume_ratio": 0.9167026990917335,
+        "momentum_5d": 0.09398381933520583,
+        "rsi": 60.663507880152686
+      },
+      {
+        "symbol": "002916",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 285.4599914550781,
+        "volume_ratio": 1.0939452100107996,
+        "momentum_5d": 0.2034061944081984,
+        "rsi": 74.68111385321825
+      },
+      {
+        "symbol": "300394",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 368.70001220703125,
+        "volume_ratio": 0.8633771949977112,
+        "momentum_5d": 0.11727276426373101,
+        "rsi": 73.8394459823205
+      },
+      {
+        "symbol": "300442",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 103.38999938964844,
+        "volume_ratio": 1.9826096951827177,
+        "momentum_5d": 0.35150325999540444,
+        "rsi": 73.76542908783996
+      },
+      {
+        "symbol": "600026",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 20.579999923706055,
+        "volume_ratio": 1.2450053260828604,
+        "momentum_5d": 0.09877204627250302,
+        "rsi": 70.46233544314805
+      },
+      {
+        "symbol": "600111",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 62.400001525878906,
+        "volume_ratio": 1.2439238581962018,
+        "momentum_5d": 0.08710801162166759,
+        "rsi": 66.80136883234815
+      },
+      {
+        "symbol": "600482",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 33.630001068115234,
+        "volume_ratio": 1.1454093425919816,
+        "momentum_5d": 0.057214763682138736,
+        "rsi": 78.3195843496678
+      },
+      {
+        "symbol": "600893",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 57.13999938964844,
+        "volume_ratio": 0.8496837100763259,
+        "momentum_5d": 0.09948043193206146,
+        "rsi": 72.19712858934166
+      },
+      {
+        "symbol": "601390",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 6.300000190734863,
+        "volume_ratio": 0.8749730538048036,
+        "momentum_5d": 0.11900533972910576,
+        "rsi": 64.28572726087859
+      },
+      {
+        "symbol": "601868",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 2.5399999618530273,
+        "volume_ratio": 1.1292004601224401,
+        "momentum_5d": 0.05394185534957363,
+        "rsi": 67.74193548387098
+      },
+      {
+        "symbol": "601872",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 16.239999771118164,
+        "volume_ratio": 1.5956671112879914,
+        "momentum_5d": 0.22844171279038106,
+        "rsi": 74.49799244854634
+      },
+      {
+        "symbol": "605117",
+        "market": "A",
+        "score": 55,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 104.5,
+        "volume_ratio": 1.3042774755077864,
+        "momentum_5d": 0.08066187484920695,
+        "rsi": 76.46300893616836
+      },
+      {
+        "symbol": "300316",
+        "market": "A",
+        "score": 45,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Strong RSI"
+        ],
+        "current_price": 55.7400016784668,
+        "volume_ratio": 0.6875354511680182,
+        "momentum_5d": 0.05448356100758822,
+        "rsi": 65.8474620836268
+      },
+      {
+        "symbol": "600674",
+        "market": "A",
+        "score": 45,
+        "reasons": [
+          "High volume breakout",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 14.4399995803833,
+        "volume_ratio": 2.0886342737447863,
+        "momentum_5d": 0.03069231580846199,
+        "rsi": 65.11627906976744
+      },
+      {
+        "symbol": "000100",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 4.96999979019165,
+        "volume_ratio": 1.2789358734340612,
+        "momentum_5d": 0.07343405342265052,
+        "rsi": 54.91803086467041
+      },
+      {
+        "symbol": "000157",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 9.989999771118164,
+        "volume_ratio": 0.7379353965500068,
+        "momentum_5d": 0.013184596244167235,
+        "rsi": 75.84745728466143
+      },
+      {
+        "symbol": "000630",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 7.929999828338623,
+        "volume_ratio": 0.8602007998715808,
+        "momentum_5d": 0.0983379582796533,
+        "rsi": 45.27776765970242
+      },
+      {
+        "symbol": "000768",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 30.829999923706055,
+        "volume_ratio": 1.022036185339064,
+        "momentum_5d": 0.02561545147850297,
+        "rsi": 67.9665582029072
+      },
+      {
+        "symbol": "002001",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 31.5,
+        "volume_ratio": 1.2486685716638906,
+        "momentum_5d": 0.04132231404958686,
+        "rsi": 70.40357948531535
+      },
+      {
+        "symbol": "002463",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 83.5999984741211,
+        "volume_ratio": 1.699462193348117,
+        "momentum_5d": 0.21247283791580207,
+        "rsi": 71.26188534737622
+      },
+      {
+        "symbol": "600089",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 30.34000015258789,
+        "volume_ratio": 0.8129937725943379,
+        "momentum_5d": 0.04910097069667496,
+        "rsi": 69.38271593309867
+      },
+      {
+        "symbol": "600150",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 37.75,
+        "volume_ratio": 0.8779438400385696,
+        "momentum_5d": 0.04686629401963183,
+        "rsi": 75.63943752543904
+      },
+      {
+        "symbol": "600160",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 41.599998474121094,
+        "volume_ratio": 0.833010001129669,
+        "momentum_5d": 0.04496350261447124,
+        "rsi": 63.20093442325612
+      },
+      {
+        "symbol": "600188",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 17.719999313354492,
+        "volume_ratio": 0.9150435346014696,
+        "momentum_5d": 0.011993094330534193,
+        "rsi": 73.9875270709027
+      },
+      {
+        "symbol": "600406",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 27.299999237060547,
+        "volume_ratio": 0.7247320465728658,
+        "momentum_5d": 0.030188650455114985,
+        "rsi": 72.92571927360925
+      },
+      {
+        "symbol": "600426",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 38.599998474121094,
+        "volume_ratio": 0.8581878534289532,
+        "momentum_5d": 0.057823970912542766,
+        "rsi": 54.29472390019254
+      },
+      {
+        "symbol": "600845",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 24.18000030517578,
+        "volume_ratio": 1.1046494875849489,
+        "momentum_5d": -0.0024752255160443992,
+        "rsi": 61.785706743905166
+      },
+      {
+        "symbol": "600875",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 37.06999969482422,
+        "volume_ratio": 1.4594180029494022,
+        "momentum_5d": 0.10163441348777136,
+        "rsi": 82.0903295735664
+      },
+      {
+        "symbol": "601117",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 9.34000015258789,
+        "volume_ratio": 1.3413792702570666,
+        "momentum_5d": 0.0949590205127191,
+        "rsi": 58.02920749657686
+      },
+      {
+        "symbol": "601618",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Strong momentum",
+          "Above all moving averages",
+          "Positive and rising MACD"
+        ],
+        "current_price": 3.2100000381469727,
+        "volume_ratio": 1.066391833459962,
+        "momentum_5d": 0.05592107842998861,
+        "rsi": 57.14285106074991
+      },
+      {
+        "symbol": "601699",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 14.890000343322754,
+        "volume_ratio": 0.9893373653026261,
+        "momentum_5d": 0.04711674147063416,
+        "rsi": 60.570469959744074
+      },
+      {
+        "symbol": "601877",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 33.040000915527344,
+        "volume_ratio": 1.0738943639847287,
+        "momentum_5d": 0.04424783669044374,
+        "rsi": 76.64337477571974
+      },
+      {
+        "symbol": "601898",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 15.170000076293945,
+        "volume_ratio": 0.7135441556078503,
+        "momentum_5d": 0.027081896149842022,
+        "rsi": 63.423423206696825
+      },
+      {
+        "symbol": "603799",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 78.62000274658203,
+        "volume_ratio": 0.8038280820323076,
+        "momentum_5d": 0.0461743333366158,
+        "rsi": 63.021237731676635
+      },
+      {
+        "symbol": "688009",
+        "market": "A",
+        "score": 40,
+        "reasons": [
+          "Above all moving averages",
+          "Strong RSI",
+          "Positive and rising MACD"
+        ],
+        "current_price": 5.71999979019165,
+        "volume_ratio": 0.6391928774861563,
+        "momentum_5d": 0.030630557408013015,
+        "rsi": 65.27774742359189
+      },
+      {
+        "symbol": "000661",
+        "market": "A",
+        "score": 35,
+        "reasons": [
+          "High volume breakout",
+          "Strong momentum"
+        ],
+        "current_price": 95.7699966430664,
+        "volume_ratio": 2.0280423379388903,
+        "momentum_5d": 0.09326482090475041,
+        "rsi": 49.74378251586323
+      },
+      {
+        "symbol": "600011",
+        "market": "A",
+        "score": 35,
+        "reasons": [
+          "High volume breakout",
+          "Strong RSI"
+        ],
+        "current_price": 7.239999771118164,
+        "volume_ratio": 2.6372058667346314,
+        "momentum_5d": 0.03873744462753992,
+        "rsi": 60.4651046740569
+      },
+      {
+        "symbol": "600027",
+        "market": "A",
+        "score": 35,
+        "reasons": [
+          "High volume breakout",
+          "Strong RSI"
+        ],
+        "current_price": 5.099999904632568,
+        "volume_ratio": 2.7838213442615163,
+        "momentum_5d": 0.03658533039580969,
+        "rsi": 69.2307339617797
+      },
+      {
+        "symbol": "600886",
+        "market": "A",
+        "score": 35,
+        "reasons": [
+          "High volume breakout",
+          "Strong RSI"
+        ],
+        "current_price": 13.25,
+        "volume_ratio": 2.1323143219200498,
+        "momentum_5d": 0.029526038680645295,
+        "rsi": 70.16126303224954
+      }
+    ],
+    "count": 43
+  }
+}

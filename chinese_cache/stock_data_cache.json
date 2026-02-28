@@ -1,0 +1,2194 @@
+{
+  "000001_A_3mo": {
+    "symbol": "000001",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:53.125762",
+    "data_points": 59,
+    "data_file": "chinese_cache/000001_A_3mo_data.pkl"
+  },
+  "000002_A_3mo": {
+    "symbol": "000002",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:54.045707",
+    "data_points": 59,
+    "data_file": "chinese_cache/000002_A_3mo_data.pkl"
+  },
+  "000063_A_3mo": {
+    "symbol": "000063",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:54.921788",
+    "data_points": 59,
+    "data_file": "chinese_cache/000063_A_3mo_data.pkl"
+  },
+  "000100_A_3mo": {
+    "symbol": "000100",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:55.792500",
+    "data_points": 59,
+    "data_file": "chinese_cache/000100_A_3mo_data.pkl"
+  },
+  "000157_A_3mo": {
+    "symbol": "000157",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:56.676257",
+    "data_points": 59,
+    "data_file": "chinese_cache/000157_A_3mo_data.pkl"
+  },
+  "000166_A_3mo": {
+    "symbol": "000166",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:57.651600",
+    "data_points": 59,
+    "data_file": "chinese_cache/000166_A_3mo_data.pkl"
+  },
+  "000301_A_3mo": {
+    "symbol": "000301",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:58.523523",
+    "data_points": 59,
+    "data_file": "chinese_cache/000301_A_3mo_data.pkl"
+  },
+  "000333_A_3mo": {
+    "symbol": "000333",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:02:59.442892",
+    "data_points": 59,
+    "data_file": "chinese_cache/000333_A_3mo_data.pkl"
+  },
+  "000338_A_3mo": {
+    "symbol": "000338",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:00.318395",
+    "data_points": 59,
+    "data_file": "chinese_cache/000338_A_3mo_data.pkl"
+  },
+  "000408_A_3mo": {
+    "symbol": "000408",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:02.192194",
+    "data_points": 59,
+    "data_file": "chinese_cache/000408_A_3mo_data.pkl"
+  },
+  "000425_A_3mo": {
+    "symbol": "000425",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:03.148083",
+    "data_points": 59,
+    "data_file": "chinese_cache/000425_A_3mo_data.pkl"
+  },
+  "000538_A_3mo": {
+    "symbol": "000538",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:04.103319",
+    "data_points": 59,
+    "data_file": "chinese_cache/000538_A_3mo_data.pkl"
+  },
+  "000568_A_3mo": {
+    "symbol": "000568",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:05.000218",
+    "data_points": 59,
+    "data_file": "chinese_cache/000568_A_3mo_data.pkl"
+  },
+  "000596_A_3mo": {
+    "symbol": "000596",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:05.969911",
+    "data_points": 59,
+    "data_file": "chinese_cache/000596_A_3mo_data.pkl"
+  },
+  "000617_A_3mo": {
+    "symbol": "000617",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:06.849324",
+    "data_points": 59,
+    "data_file": "chinese_cache/000617_A_3mo_data.pkl"
+  },
+  "000625_A_3mo": {
+    "symbol": "000625",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:07.738208",
+    "data_points": 59,
+    "data_file": "chinese_cache/000625_A_3mo_data.pkl"
+  },
+  "000630_A_3mo": {
+    "symbol": "000630",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:08.655665",
+    "data_points": 59,
+    "data_file": "chinese_cache/000630_A_3mo_data.pkl"
+  },
+  "000651_A_3mo": {
+    "symbol": "000651",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:09.627738",
+    "data_points": 59,
+    "data_file": "chinese_cache/000651_A_3mo_data.pkl"
+  },
+  "000661_A_3mo": {
+    "symbol": "000661",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:10.514185",
+    "data_points": 59,
+    "data_file": "chinese_cache/000661_A_3mo_data.pkl"
+  },
+  "000708_A_3mo": {
+    "symbol": "000708",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:12.413331",
+    "data_points": 59,
+    "data_file": "chinese_cache/000708_A_3mo_data.pkl"
+  },
+  "000725_A_3mo": {
+    "symbol": "000725",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:13.295950",
+    "data_points": 59,
+    "data_file": "chinese_cache/000725_A_3mo_data.pkl"
+  },
+  "000768_A_3mo": {
+    "symbol": "000768",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:14.208250",
+    "data_points": 59,
+    "data_file": "chinese_cache/000768_A_3mo_data.pkl"
+  },
+  "000776_A_3mo": {
+    "symbol": "000776",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:15.169906",
+    "data_points": 59,
+    "data_file": "chinese_cache/000776_A_3mo_data.pkl"
+  },
+  "000792_A_3mo": {
+    "symbol": "000792",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:16.050511",
+    "data_points": 59,
+    "data_file": "chinese_cache/000792_A_3mo_data.pkl"
+  },
+  "000800_A_3mo": {
+    "symbol": "000800",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:16.937989",
+    "data_points": 59,
+    "data_file": "chinese_cache/000800_A_3mo_data.pkl"
+  },
+  "000807_A_3mo": {
+    "symbol": "000807",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:17.875886",
+    "data_points": 59,
+    "data_file": "chinese_cache/000807_A_3mo_data.pkl"
+  },
+  "000858_A_3mo": {
+    "symbol": "000858",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:18.766910",
+    "data_points": 59,
+    "data_file": "chinese_cache/000858_A_3mo_data.pkl"
+  },
+  "000876_A_3mo": {
+    "symbol": "000876",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:19.652533",
+    "data_points": 59,
+    "data_file": "chinese_cache/000876_A_3mo_data.pkl"
+  },
+  "000895_A_3mo": {
+    "symbol": "000895",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:20.558861",
+    "data_points": 59,
+    "data_file": "chinese_cache/000895_A_3mo_data.pkl"
+  },
+  "000938_A_3mo": {
+    "symbol": "000938",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:22.496737",
+    "data_points": 59,
+    "data_file": "chinese_cache/000938_A_3mo_data.pkl"
+  },
+  "000963_A_3mo": {
+    "symbol": "000963",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:23.458188",
+    "data_points": 59,
+    "data_file": "chinese_cache/000963_A_3mo_data.pkl"
+  },
+  "000975_A_3mo": {
+    "symbol": "000975",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:24.381216",
+    "data_points": 59,
+    "data_file": "chinese_cache/000975_A_3mo_data.pkl"
+  },
+  "000977_A_3mo": {
+    "symbol": "000977",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:25.301847",
+    "data_points": 59,
+    "data_file": "chinese_cache/000977_A_3mo_data.pkl"
+  },
+  "000983_A_3mo": {
+    "symbol": "000983",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:26.259556",
+    "data_points": 59,
+    "data_file": "chinese_cache/000983_A_3mo_data.pkl"
+  },
+  "000999_A_3mo": {
+    "symbol": "000999",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:27.213554",
+    "data_points": 59,
+    "data_file": "chinese_cache/000999_A_3mo_data.pkl"
+  },
+  "002001_A_3mo": {
+    "symbol": "002001",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:34.697175",
+    "data_points": 59,
+    "data_file": "chinese_cache/002001_A_3mo_data.pkl"
+  },
+  "002027_A_3mo": {
+    "symbol": "002027",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:35.617264",
+    "data_points": 59,
+    "data_file": "chinese_cache/002027_A_3mo_data.pkl"
+  },
+  "002028_A_3mo": {
+    "symbol": "002028",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:36.491264",
+    "data_points": 59,
+    "data_file": "chinese_cache/002028_A_3mo_data.pkl"
+  },
+  "002049_A_3mo": {
+    "symbol": "002049",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:37.412494",
+    "data_points": 59,
+    "data_file": "chinese_cache/002049_A_3mo_data.pkl"
+  },
+  "002074_A_3mo": {
+    "symbol": "002074",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:38.324027",
+    "data_points": 59,
+    "data_file": "chinese_cache/002074_A_3mo_data.pkl"
+  },
+  "002129_A_3mo": {
+    "symbol": "002129",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:39.275687",
+    "data_points": 59,
+    "data_file": "chinese_cache/002129_A_3mo_data.pkl"
+  },
+  "002142_A_3mo": {
+    "symbol": "002142",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:40.193525",
+    "data_points": 59,
+    "data_file": "chinese_cache/002142_A_3mo_data.pkl"
+  },
+  "002179_A_3mo": {
+    "symbol": "002179",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:41.082132",
+    "data_points": 59,
+    "data_file": "chinese_cache/002179_A_3mo_data.pkl"
+  },
+  "002180_A_3mo": {
+    "symbol": "002180",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:42.008348",
+    "data_points": 59,
+    "data_file": "chinese_cache/002180_A_3mo_data.pkl"
+  },
+  "002230_A_3mo": {
+    "symbol": "002230",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:42.939530",
+    "data_points": 59,
+    "data_file": "chinese_cache/002230_A_3mo_data.pkl"
+  },
+  "002236_A_3mo": {
+    "symbol": "002236",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:44.865703",
+    "data_points": 59,
+    "data_file": "chinese_cache/002236_A_3mo_data.pkl"
+  },
+  "002241_A_3mo": {
+    "symbol": "002241",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:45.742300",
+    "data_points": 59,
+    "data_file": "chinese_cache/002241_A_3mo_data.pkl"
+  },
+  "002252_A_3mo": {
+    "symbol": "002252",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:46.700122",
+    "data_points": 59,
+    "data_file": "chinese_cache/002252_A_3mo_data.pkl"
+  },
+  "002304_A_3mo": {
+    "symbol": "002304",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:47.654831",
+    "data_points": 59,
+    "data_file": "chinese_cache/002304_A_3mo_data.pkl"
+  },
+  "002311_A_3mo": {
+    "symbol": "002311",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:48.543270",
+    "data_points": 59,
+    "data_file": "chinese_cache/002311_A_3mo_data.pkl"
+  },
+  "002352_A_3mo": {
+    "symbol": "002352",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:49.410536",
+    "data_points": 59,
+    "data_file": "chinese_cache/002352_A_3mo_data.pkl"
+  },
+  "002371_A_3mo": {
+    "symbol": "002371",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:50.279633",
+    "data_points": 59,
+    "data_file": "chinese_cache/002371_A_3mo_data.pkl"
+  },
+  "002415_A_3mo": {
+    "symbol": "002415",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:51.148005",
+    "data_points": 59,
+    "data_file": "chinese_cache/002415_A_3mo_data.pkl"
+  },
+  "002422_A_3mo": {
+    "symbol": "002422",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:52.011740",
+    "data_points": 59,
+    "data_file": "chinese_cache/002422_A_3mo_data.pkl"
+  },
+  "002459_A_3mo": {
+    "symbol": "002459",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:52.882026",
+    "data_points": 59,
+    "data_file": "chinese_cache/002459_A_3mo_data.pkl"
+  },
+  "002460_A_3mo": {
+    "symbol": "002460",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:54.748522",
+    "data_points": 59,
+    "data_file": "chinese_cache/002460_A_3mo_data.pkl"
+  },
+  "002463_A_3mo": {
+    "symbol": "002463",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:55.612382",
+    "data_points": 59,
+    "data_file": "chinese_cache/002463_A_3mo_data.pkl"
+  },
+  "002466_A_3mo": {
+    "symbol": "002466",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:56.530939",
+    "data_points": 59,
+    "data_file": "chinese_cache/002466_A_3mo_data.pkl"
+  },
+  "002475_A_3mo": {
+    "symbol": "002475",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:57.480518",
+    "data_points": 59,
+    "data_file": "chinese_cache/002475_A_3mo_data.pkl"
+  },
+  "002594_A_3mo": {
+    "symbol": "002594",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:58.345832",
+    "data_points": 59,
+    "data_file": "chinese_cache/002594_A_3mo_data.pkl"
+  },
+  "002600_A_3mo": {
+    "symbol": "002600",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:03:59.207168",
+    "data_points": 59,
+    "data_file": "chinese_cache/002600_A_3mo_data.pkl"
+  },
+  "002601_A_3mo": {
+    "symbol": "002601",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:00.076560",
+    "data_points": 59,
+    "data_file": "chinese_cache/002601_A_3mo_data.pkl"
+  },
+  "002648_A_3mo": {
+    "symbol": "002648",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:00.939381",
+    "data_points": 59,
+    "data_file": "chinese_cache/002648_A_3mo_data.pkl"
+  },
+  "002709_A_3mo": {
+    "symbol": "002709",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:01.884534",
+    "data_points": 59,
+    "data_file": "chinese_cache/002709_A_3mo_data.pkl"
+  },
+  "002714_A_3mo": {
+    "symbol": "002714",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:02.822333",
+    "data_points": 59,
+    "data_file": "chinese_cache/002714_A_3mo_data.pkl"
+  },
+  "002736_A_3mo": {
+    "symbol": "002736",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:04.686295",
+    "data_points": 59,
+    "data_file": "chinese_cache/002736_A_3mo_data.pkl"
+  },
+  "002916_A_3mo": {
+    "symbol": "002916",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:05.546998",
+    "data_points": 59,
+    "data_file": "chinese_cache/002916_A_3mo_data.pkl"
+  },
+  "002920_A_3mo": {
+    "symbol": "002920",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:06.518322",
+    "data_points": 59,
+    "data_file": "chinese_cache/002920_A_3mo_data.pkl"
+  },
+  "002938_A_3mo": {
+    "symbol": "002938",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:07.422703",
+    "data_points": 59,
+    "data_file": "chinese_cache/002938_A_3mo_data.pkl"
+  },
+  "300014_A_3mo": {
+    "symbol": "300014",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:09.513247",
+    "data_points": 59,
+    "data_file": "chinese_cache/300014_A_3mo_data.pkl"
+  },
+  "300015_A_3mo": {
+    "symbol": "300015",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:10.415168",
+    "data_points": 59,
+    "data_file": "chinese_cache/300015_A_3mo_data.pkl"
+  },
+  "300033_A_3mo": {
+    "symbol": "300033",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:11.331878",
+    "data_points": 59,
+    "data_file": "chinese_cache/300033_A_3mo_data.pkl"
+  },
+  "300059_A_3mo": {
+    "symbol": "300059",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:12.195464",
+    "data_points": 59,
+    "data_file": "chinese_cache/300059_A_3mo_data.pkl"
+  },
+  "300122_A_3mo": {
+    "symbol": "300122",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:13.119124",
+    "data_points": 59,
+    "data_file": "chinese_cache/300122_A_3mo_data.pkl"
+  },
+  "300124_A_3mo": {
+    "symbol": "300124",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:15.012804",
+    "data_points": 59,
+    "data_file": "chinese_cache/300124_A_3mo_data.pkl"
+  },
+  "300274_A_3mo": {
+    "symbol": "300274",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:15.912931",
+    "data_points": 59,
+    "data_file": "chinese_cache/300274_A_3mo_data.pkl"
+  },
+  "300308_A_3mo": {
+    "symbol": "300308",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:16.776814",
+    "data_points": 59,
+    "data_file": "chinese_cache/300308_A_3mo_data.pkl"
+  },
+  "300316_A_3mo": {
+    "symbol": "300316",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:17.714500",
+    "data_points": 59,
+    "data_file": "chinese_cache/300316_A_3mo_data.pkl"
+  },
+  "300347_A_3mo": {
+    "symbol": "300347",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:18.588229",
+    "data_points": 59,
+    "data_file": "chinese_cache/300347_A_3mo_data.pkl"
+  },
+  "300394_A_3mo": {
+    "symbol": "300394",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:19.446157",
+    "data_points": 59,
+    "data_file": "chinese_cache/300394_A_3mo_data.pkl"
+  },
+  "300413_A_3mo": {
+    "symbol": "300413",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:20.305353",
+    "data_points": 59,
+    "data_file": "chinese_cache/300413_A_3mo_data.pkl"
+  },
+  "300418_A_3mo": {
+    "symbol": "300418",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:21.196844",
+    "data_points": 59,
+    "data_file": "chinese_cache/300418_A_3mo_data.pkl"
+  },
+  "300442_A_3mo": {
+    "symbol": "300442",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:22.081249",
+    "data_points": 59,
+    "data_file": "chinese_cache/300442_A_3mo_data.pkl"
+  },
+  "300498_A_3mo": {
+    "symbol": "300498",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:22.998292",
+    "data_points": 59,
+    "data_file": "chinese_cache/300498_A_3mo_data.pkl"
+  },
+  "300502_A_3mo": {
+    "symbol": "300502",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:24.884194",
+    "data_points": 59,
+    "data_file": "chinese_cache/300502_A_3mo_data.pkl"
+  },
+  "300628_A_3mo": {
+    "symbol": "300628",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:25.763998",
+    "data_points": 59,
+    "data_file": "chinese_cache/300628_A_3mo_data.pkl"
+  },
+  "300661_A_3mo": {
+    "symbol": "300661",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:26.695949",
+    "data_points": 59,
+    "data_file": "chinese_cache/300661_A_3mo_data.pkl"
+  },
+  "300750_A_3mo": {
+    "symbol": "300750",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:27.552342",
+    "data_points": 59,
+    "data_file": "chinese_cache/300750_A_3mo_data.pkl"
+  },
+  "300759_A_3mo": {
+    "symbol": "300759",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:28.432039",
+    "data_points": 59,
+    "data_file": "chinese_cache/300759_A_3mo_data.pkl"
+  },
+  "300760_A_3mo": {
+    "symbol": "300760",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:29.290567",
+    "data_points": 59,
+    "data_file": "chinese_cache/300760_A_3mo_data.pkl"
+  },
+  "300782_A_3mo": {
+    "symbol": "300782",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:30.159225",
+    "data_points": 59,
+    "data_file": "chinese_cache/300782_A_3mo_data.pkl"
+  },
+  "300832_A_3mo": {
+    "symbol": "300832",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:31.015831",
+    "data_points": 59,
+    "data_file": "chinese_cache/300832_A_3mo_data.pkl"
+  },
+  "300896_A_3mo": {
+    "symbol": "300896",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:31.874688",
+    "data_points": 59,
+    "data_file": "chinese_cache/300896_A_3mo_data.pkl"
+  },
+  "300979_A_3mo": {
+    "symbol": "300979",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:32.728711",
+    "data_points": 59,
+    "data_file": "chinese_cache/300979_A_3mo_data.pkl"
+  },
+  "300999_A_3mo": {
+    "symbol": "300999",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:34.610981",
+    "data_points": 59,
+    "data_file": "chinese_cache/300999_A_3mo_data.pkl"
+  },
+  "600009_A_3mo": {
+    "symbol": "600009",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:37.922242",
+    "data_points": 59,
+    "data_file": "chinese_cache/600009_A_3mo_data.pkl"
+  },
+  "600010_A_3mo": {
+    "symbol": "600010",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:38.875580",
+    "data_points": 59,
+    "data_file": "chinese_cache/600010_A_3mo_data.pkl"
+  },
+  "600011_A_3mo": {
+    "symbol": "600011",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:39.772264",
+    "data_points": 59,
+    "data_file": "chinese_cache/600011_A_3mo_data.pkl"
+  },
+  "600015_A_3mo": {
+    "symbol": "600015",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:40.707245",
+    "data_points": 59,
+    "data_file": "chinese_cache/600015_A_3mo_data.pkl"
+  },
+  "600016_A_3mo": {
+    "symbol": "600016",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:41.643934",
+    "data_points": 59,
+    "data_file": "chinese_cache/600016_A_3mo_data.pkl"
+  },
+  "600018_A_3mo": {
+    "symbol": "600018",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:42.522530",
+    "data_points": 59,
+    "data_file": "chinese_cache/600018_A_3mo_data.pkl"
+  },
+  "600019_A_3mo": {
+    "symbol": "600019",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:43.473587",
+    "data_points": 59,
+    "data_file": "chinese_cache/600019_A_3mo_data.pkl"
+  },
+  "600023_A_3mo": {
+    "symbol": "600023",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:45.335170",
+    "data_points": 59,
+    "data_file": "chinese_cache/600023_A_3mo_data.pkl"
+  },
+  "600025_A_3mo": {
+    "symbol": "600025",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:46.221300",
+    "data_points": 59,
+    "data_file": "chinese_cache/600025_A_3mo_data.pkl"
+  },
+  "600026_A_3mo": {
+    "symbol": "600026",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:47.153038",
+    "data_points": 59,
+    "data_file": "chinese_cache/600026_A_3mo_data.pkl"
+  },
+  "600027_A_3mo": {
+    "symbol": "600027",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:48.033774",
+    "data_points": 59,
+    "data_file": "chinese_cache/600027_A_3mo_data.pkl"
+  },
+  "600028_A_3mo": {
+    "symbol": "600028",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:48.983209",
+    "data_points": 59,
+    "data_file": "chinese_cache/600028_A_3mo_data.pkl"
+  },
+  "600029_A_3mo": {
+    "symbol": "600029",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:49.851628",
+    "data_points": 59,
+    "data_file": "chinese_cache/600029_A_3mo_data.pkl"
+  },
+  "600030_A_3mo": {
+    "symbol": "600030",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:50.754074",
+    "data_points": 59,
+    "data_file": "chinese_cache/600030_A_3mo_data.pkl"
+  },
+  "600031_A_3mo": {
+    "symbol": "600031",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:51.651787",
+    "data_points": 59,
+    "data_file": "chinese_cache/600031_A_3mo_data.pkl"
+  },
+  "600036_A_3mo": {
+    "symbol": "600036",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:52.601808",
+    "data_points": 59,
+    "data_file": "chinese_cache/600036_A_3mo_data.pkl"
+  },
+  "600039_A_3mo": {
+    "symbol": "600039",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:53.495797",
+    "data_points": 59,
+    "data_file": "chinese_cache/600039_A_3mo_data.pkl"
+  },
+  "600048_A_3mo": {
+    "symbol": "600048",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:55.366017",
+    "data_points": 59,
+    "data_file": "chinese_cache/600048_A_3mo_data.pkl"
+  },
+  "600050_A_3mo": {
+    "symbol": "600050",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:56.244981",
+    "data_points": 59,
+    "data_file": "chinese_cache/600050_A_3mo_data.pkl"
+  },
+  "600061_A_3mo": {
+    "symbol": "600061",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:57.132388",
+    "data_points": 59,
+    "data_file": "chinese_cache/600061_A_3mo_data.pkl"
+  },
+  "600066_A_3mo": {
+    "symbol": "600066",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:58.008300",
+    "data_points": 59,
+    "data_file": "chinese_cache/600066_A_3mo_data.pkl"
+  },
+  "600089_A_3mo": {
+    "symbol": "600089",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:04:58.964866",
+    "data_points": 59,
+    "data_file": "chinese_cache/600089_A_3mo_data.pkl"
+  },
+  "600111_A_3mo": {
+    "symbol": "600111",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:00.081610",
+    "data_points": 59,
+    "data_file": "chinese_cache/600111_A_3mo_data.pkl"
+  },
+  "600115_A_3mo": {
+    "symbol": "600115",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:01.031249",
+    "data_points": 59,
+    "data_file": "chinese_cache/600115_A_3mo_data.pkl"
+  },
+  "600150_A_3mo": {
+    "symbol": "600150",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:01.908362",
+    "data_points": 59,
+    "data_file": "chinese_cache/600150_A_3mo_data.pkl"
+  },
+  "600160_A_3mo": {
+    "symbol": "600160",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:02.797726",
+    "data_points": 59,
+    "data_file": "chinese_cache/600160_A_3mo_data.pkl"
+  },
+  "600161_A_3mo": {
+    "symbol": "600161",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:03.698534",
+    "data_points": 59,
+    "data_file": "chinese_cache/600161_A_3mo_data.pkl"
+  },
+  "600176_A_3mo": {
+    "symbol": "600176",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:05.598190",
+    "data_points": 59,
+    "data_file": "chinese_cache/600176_A_3mo_data.pkl"
+  },
+  "600183_A_3mo": {
+    "symbol": "600183",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:06.471169",
+    "data_points": 59,
+    "data_file": "chinese_cache/600183_A_3mo_data.pkl"
+  },
+  "600188_A_3mo": {
+    "symbol": "600188",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:07.404688",
+    "data_points": 59,
+    "data_file": "chinese_cache/600188_A_3mo_data.pkl"
+  },
+  "600219_A_3mo": {
+    "symbol": "600219",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:08.288787",
+    "data_points": 59,
+    "data_file": "chinese_cache/600219_A_3mo_data.pkl"
+  },
+  "600233_A_3mo": {
+    "symbol": "600233",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:09.171536",
+    "data_points": 59,
+    "data_file": "chinese_cache/600233_A_3mo_data.pkl"
+  },
+  "600276_A_3mo": {
+    "symbol": "600276",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:10.169257",
+    "data_points": 59,
+    "data_file": "chinese_cache/600276_A_3mo_data.pkl"
+  },
+  "600332_A_3mo": {
+    "symbol": "600332",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:11.072080",
+    "data_points": 59,
+    "data_file": "chinese_cache/600332_A_3mo_data.pkl"
+  },
+  "600346_A_3mo": {
+    "symbol": "600346",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:12.005584",
+    "data_points": 59,
+    "data_file": "chinese_cache/600346_A_3mo_data.pkl"
+  },
+  "600362_A_3mo": {
+    "symbol": "600362",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:12.880930",
+    "data_points": 59,
+    "data_file": "chinese_cache/600362_A_3mo_data.pkl"
+  },
+  "600372_A_3mo": {
+    "symbol": "600372",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:13.764110",
+    "data_points": 59,
+    "data_file": "chinese_cache/600372_A_3mo_data.pkl"
+  },
+  "600377_A_3mo": {
+    "symbol": "600377",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:15.703943",
+    "data_points": 59,
+    "data_file": "chinese_cache/600377_A_3mo_data.pkl"
+  },
+  "600406_A_3mo": {
+    "symbol": "600406",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:16.656813",
+    "data_points": 59,
+    "data_file": "chinese_cache/600406_A_3mo_data.pkl"
+  },
+  "600415_A_3mo": {
+    "symbol": "600415",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:17.602847",
+    "data_points": 59,
+    "data_file": "chinese_cache/600415_A_3mo_data.pkl"
+  },
+  "600426_A_3mo": {
+    "symbol": "600426",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:18.519473",
+    "data_points": 59,
+    "data_file": "chinese_cache/600426_A_3mo_data.pkl"
+  },
+  "600436_A_3mo": {
+    "symbol": "600436",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:19.471494",
+    "data_points": 59,
+    "data_file": "chinese_cache/600436_A_3mo_data.pkl"
+  },
+  "600438_A_3mo": {
+    "symbol": "600438",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:20.350206",
+    "data_points": 59,
+    "data_file": "chinese_cache/600438_A_3mo_data.pkl"
+  },
+  "600460_A_3mo": {
+    "symbol": "600460",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:21.228846",
+    "data_points": 59,
+    "data_file": "chinese_cache/600460_A_3mo_data.pkl"
+  },
+  "600482_A_3mo": {
+    "symbol": "600482",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:22.099445",
+    "data_points": 59,
+    "data_file": "chinese_cache/600482_A_3mo_data.pkl"
+  },
+  "600489_A_3mo": {
+    "symbol": "600489",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:23.023375",
+    "data_points": 59,
+    "data_file": "chinese_cache/600489_A_3mo_data.pkl"
+  },
+  "600515_A_3mo": {
+    "symbol": "600515",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:23.931368",
+    "data_points": 59,
+    "data_file": "chinese_cache/600515_A_3mo_data.pkl"
+  },
+  "600519_A_3mo": {
+    "symbol": "600519",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:25.817525",
+    "data_points": 59,
+    "data_file": "chinese_cache/600519_A_3mo_data.pkl"
+  },
+  "600547_A_3mo": {
+    "symbol": "600547",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:26.691337",
+    "data_points": 59,
+    "data_file": "chinese_cache/600547_A_3mo_data.pkl"
+  },
+  "600570_A_3mo": {
+    "symbol": "600570",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:27.566175",
+    "data_points": 59,
+    "data_file": "chinese_cache/600570_A_3mo_data.pkl"
+  },
+  "600584_A_3mo": {
+    "symbol": "600584",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:28.444635",
+    "data_points": 59,
+    "data_file": "chinese_cache/600584_A_3mo_data.pkl"
+  },
+  "600585_A_3mo": {
+    "symbol": "600585",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:29.318687",
+    "data_points": 59,
+    "data_file": "chinese_cache/600585_A_3mo_data.pkl"
+  },
+  "600588_A_3mo": {
+    "symbol": "600588",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:30.188601",
+    "data_points": 59,
+    "data_file": "chinese_cache/600588_A_3mo_data.pkl"
+  },
+  "600600_A_3mo": {
+    "symbol": "600600",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:31.072876",
+    "data_points": 59,
+    "data_file": "chinese_cache/600600_A_3mo_data.pkl"
+  },
+  "600660_A_3mo": {
+    "symbol": "600660",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:31.959958",
+    "data_points": 59,
+    "data_file": "chinese_cache/600660_A_3mo_data.pkl"
+  },
+  "600674_A_3mo": {
+    "symbol": "600674",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:32.846865",
+    "data_points": 59,
+    "data_file": "chinese_cache/600674_A_3mo_data.pkl"
+  },
+  "600690_A_3mo": {
+    "symbol": "600690",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:33.770231",
+    "data_points": 59,
+    "data_file": "chinese_cache/600690_A_3mo_data.pkl"
+  },
+  "600760_A_3mo": {
+    "symbol": "600760",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:35.647893",
+    "data_points": 59,
+    "data_file": "chinese_cache/600760_A_3mo_data.pkl"
+  },
+  "600803_A_3mo": {
+    "symbol": "600803",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:36.558875",
+    "data_points": 59,
+    "data_file": "chinese_cache/600803_A_3mo_data.pkl"
+  },
+  "600809_A_3mo": {
+    "symbol": "600809",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:37.443822",
+    "data_points": 59,
+    "data_file": "chinese_cache/600809_A_3mo_data.pkl"
+  },
+  "600845_A_3mo": {
+    "symbol": "600845",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:38.355840",
+    "data_points": 59,
+    "data_file": "chinese_cache/600845_A_3mo_data.pkl"
+  },
+  "600875_A_3mo": {
+    "symbol": "600875",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:39.242458",
+    "data_points": 59,
+    "data_file": "chinese_cache/600875_A_3mo_data.pkl"
+  },
+  "600886_A_3mo": {
+    "symbol": "600886",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:40.127358",
+    "data_points": 59,
+    "data_file": "chinese_cache/600886_A_3mo_data.pkl"
+  },
+  "600887_A_3mo": {
+    "symbol": "600887",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:41.011438",
+    "data_points": 59,
+    "data_file": "chinese_cache/600887_A_3mo_data.pkl"
+  },
+  "600893_A_3mo": {
+    "symbol": "600893",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:41.913116",
+    "data_points": 59,
+    "data_file": "chinese_cache/600893_A_3mo_data.pkl"
+  },
+  "600905_A_3mo": {
+    "symbol": "600905",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:42.797860",
+    "data_points": 59,
+    "data_file": "chinese_cache/600905_A_3mo_data.pkl"
+  },
+  "600918_A_3mo": {
+    "symbol": "600918",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:43.756824",
+    "data_points": 59,
+    "data_file": "chinese_cache/600918_A_3mo_data.pkl"
+  },
+  "600919_A_3mo": {
+    "symbol": "600919",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:45.620515",
+    "data_points": 59,
+    "data_file": "chinese_cache/600919_A_3mo_data.pkl"
+  },
+  "600926_A_3mo": {
+    "symbol": "600926",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:46.508788",
+    "data_points": 59,
+    "data_file": "chinese_cache/600926_A_3mo_data.pkl"
+  },
+  "600938_A_3mo": {
+    "symbol": "600938",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:47.363522",
+    "data_points": 59,
+    "data_file": "chinese_cache/600938_A_3mo_data.pkl"
+  },
+  "600941_A_3mo": {
+    "symbol": "600941",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:48.274242",
+    "data_points": 59,
+    "data_file": "chinese_cache/600941_A_3mo_data.pkl"
+  },
+  "600958_A_3mo": {
+    "symbol": "600958",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:49.185408",
+    "data_points": 59,
+    "data_file": "chinese_cache/600958_A_3mo_data.pkl"
+  },
+  "600989_A_3mo": {
+    "symbol": "600989",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:50.116297",
+    "data_points": 59,
+    "data_file": "chinese_cache/600989_A_3mo_data.pkl"
+  },
+  "600999_A_3mo": {
+    "symbol": "600999",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:51.037495",
+    "data_points": 59,
+    "data_file": "chinese_cache/600999_A_3mo_data.pkl"
+  },
+  "601006_A_3mo": {
+    "symbol": "601006",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:51.964656",
+    "data_points": 59,
+    "data_file": "chinese_cache/601006_A_3mo_data.pkl"
+  },
+  "601009_A_3mo": {
+    "symbol": "601009",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:52.836680",
+    "data_points": 59,
+    "data_file": "chinese_cache/601009_A_3mo_data.pkl"
+  },
+  "601012_A_3mo": {
+    "symbol": "601012",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:53.699932",
+    "data_points": 59,
+    "data_file": "chinese_cache/601012_A_3mo_data.pkl"
+  },
+  "601021_A_3mo": {
+    "symbol": "601021",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:55.614870",
+    "data_points": 59,
+    "data_file": "chinese_cache/601021_A_3mo_data.pkl"
+  },
+  "601058_A_3mo": {
+    "symbol": "601058",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:56.531467",
+    "data_points": 59,
+    "data_file": "chinese_cache/601058_A_3mo_data.pkl"
+  },
+  "601059_A_3mo": {
+    "symbol": "601059",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:57.386915",
+    "data_points": 59,
+    "data_file": "chinese_cache/601059_A_3mo_data.pkl"
+  },
+  "601066_A_3mo": {
+    "symbol": "601066",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:58.269101",
+    "data_points": 59,
+    "data_file": "chinese_cache/601066_A_3mo_data.pkl"
+  },
+  "601077_A_3mo": {
+    "symbol": "601077",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:05:59.150628",
+    "data_points": 59,
+    "data_file": "chinese_cache/601077_A_3mo_data.pkl"
+  },
+  "601088_A_3mo": {
+    "symbol": "601088",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:00.018985",
+    "data_points": 59,
+    "data_file": "chinese_cache/601088_A_3mo_data.pkl"
+  },
+  "601100_A_3mo": {
+    "symbol": "601100",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:00.940261",
+    "data_points": 59,
+    "data_file": "chinese_cache/601100_A_3mo_data.pkl"
+  },
+  "601111_A_3mo": {
+    "symbol": "601111",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:01.885194",
+    "data_points": 59,
+    "data_file": "chinese_cache/601111_A_3mo_data.pkl"
+  },
+  "601117_A_3mo": {
+    "symbol": "601117",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:02.796396",
+    "data_points": 59,
+    "data_file": "chinese_cache/601117_A_3mo_data.pkl"
+  },
+  "601127_A_3mo": {
+    "symbol": "601127",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:03.727903",
+    "data_points": 59,
+    "data_file": "chinese_cache/601127_A_3mo_data.pkl"
+  },
+  "601136_A_3mo": {
+    "symbol": "601136",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:05.589598",
+    "data_points": 59,
+    "data_file": "chinese_cache/601136_A_3mo_data.pkl"
+  },
+  "601138_A_3mo": {
+    "symbol": "601138",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:06.458552",
+    "data_points": 59,
+    "data_file": "chinese_cache/601138_A_3mo_data.pkl"
+  },
+  "601166_A_3mo": {
+    "symbol": "601166",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:07.335722",
+    "data_points": 59,
+    "data_file": "chinese_cache/601166_A_3mo_data.pkl"
+  },
+  "601169_A_3mo": {
+    "symbol": "601169",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:08.211402",
+    "data_points": 59,
+    "data_file": "chinese_cache/601169_A_3mo_data.pkl"
+  },
+  "601186_A_3mo": {
+    "symbol": "601186",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:09.138203",
+    "data_points": 59,
+    "data_file": "chinese_cache/601186_A_3mo_data.pkl"
+  },
+  "601211_A_3mo": {
+    "symbol": "601211",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:10.073469",
+    "data_points": 59,
+    "data_file": "chinese_cache/601211_A_3mo_data.pkl"
+  },
+  "601225_A_3mo": {
+    "symbol": "601225",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:10.970543",
+    "data_points": 59,
+    "data_file": "chinese_cache/601225_A_3mo_data.pkl"
+  },
+  "601229_A_3mo": {
+    "symbol": "601229",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:11.835246",
+    "data_points": 59,
+    "data_file": "chinese_cache/601229_A_3mo_data.pkl"
+  },
+  "601236_A_3mo": {
+    "symbol": "601236",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:12.691065",
+    "data_points": 59,
+    "data_file": "chinese_cache/601236_A_3mo_data.pkl"
+  },
+  "601238_A_3mo": {
+    "symbol": "601238",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:13.552930",
+    "data_points": 59,
+    "data_file": "chinese_cache/601238_A_3mo_data.pkl"
+  },
+  "601288_A_3mo": {
+    "symbol": "601288",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:15.417616",
+    "data_points": 59,
+    "data_file": "chinese_cache/601288_A_3mo_data.pkl"
+  },
+  "601318_A_3mo": {
+    "symbol": "601318",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:16.344031",
+    "data_points": 59,
+    "data_file": "chinese_cache/601318_A_3mo_data.pkl"
+  },
+  "601319_A_3mo": {
+    "symbol": "601319",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:17.202066",
+    "data_points": 59,
+    "data_file": "chinese_cache/601319_A_3mo_data.pkl"
+  },
+  "601328_A_3mo": {
+    "symbol": "601328",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:18.074247",
+    "data_points": 59,
+    "data_file": "chinese_cache/601328_A_3mo_data.pkl"
+  },
+  "601336_A_3mo": {
+    "symbol": "601336",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:18.942654",
+    "data_points": 59,
+    "data_file": "chinese_cache/601336_A_3mo_data.pkl"
+  },
+  "601360_A_3mo": {
+    "symbol": "601360",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:19.819533",
+    "data_points": 59,
+    "data_file": "chinese_cache/601360_A_3mo_data.pkl"
+  },
+  "601377_A_3mo": {
+    "symbol": "601377",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:20.746269",
+    "data_points": 59,
+    "data_file": "chinese_cache/601377_A_3mo_data.pkl"
+  },
+  "601390_A_3mo": {
+    "symbol": "601390",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:21.612531",
+    "data_points": 59,
+    "data_file": "chinese_cache/601390_A_3mo_data.pkl"
+  },
+  "601398_A_3mo": {
+    "symbol": "601398",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:22.509885",
+    "data_points": 59,
+    "data_file": "chinese_cache/601398_A_3mo_data.pkl"
+  },
+  "601600_A_3mo": {
+    "symbol": "601600",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:23.383370",
+    "data_points": 59,
+    "data_file": "chinese_cache/601600_A_3mo_data.pkl"
+  },
+  "601601_A_3mo": {
+    "symbol": "601601",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:25.254581",
+    "data_points": 59,
+    "data_file": "chinese_cache/601601_A_3mo_data.pkl"
+  },
+  "601607_A_3mo": {
+    "symbol": "601607",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:26.190563",
+    "data_points": 59,
+    "data_file": "chinese_cache/601607_A_3mo_data.pkl"
+  },
+  "601618_A_3mo": {
+    "symbol": "601618",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:27.127712",
+    "data_points": 59,
+    "data_file": "chinese_cache/601618_A_3mo_data.pkl"
+  },
+  "601628_A_3mo": {
+    "symbol": "601628",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:28.005702",
+    "data_points": 59,
+    "data_file": "chinese_cache/601628_A_3mo_data.pkl"
+  },
+  "601633_A_3mo": {
+    "symbol": "601633",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:28.933618",
+    "data_points": 59,
+    "data_file": "chinese_cache/601633_A_3mo_data.pkl"
+  },
+  "601658_A_3mo": {
+    "symbol": "601658",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:29.843236",
+    "data_points": 59,
+    "data_file": "chinese_cache/601658_A_3mo_data.pkl"
+  },
+  "601668_A_3mo": {
+    "symbol": "601668",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:30.909077",
+    "data_points": 59,
+    "data_file": "chinese_cache/601668_A_3mo_data.pkl"
+  },
+  "601669_A_3mo": {
+    "symbol": "601669",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:31.777117",
+    "data_points": 59,
+    "data_file": "chinese_cache/601669_A_3mo_data.pkl"
+  },
+  "601688_A_3mo": {
+    "symbol": "601688",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:32.731476",
+    "data_points": 59,
+    "data_file": "chinese_cache/601688_A_3mo_data.pkl"
+  },
+  "601689_A_3mo": {
+    "symbol": "601689",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:33.671711",
+    "data_points": 59,
+    "data_file": "chinese_cache/601689_A_3mo_data.pkl"
+  },
+  "601698_A_3mo": {
+    "symbol": "601698",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:35.606427",
+    "data_points": 59,
+    "data_file": "chinese_cache/601698_A_3mo_data.pkl"
+  },
+  "601699_A_3mo": {
+    "symbol": "601699",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:36.551413",
+    "data_points": 59,
+    "data_file": "chinese_cache/601699_A_3mo_data.pkl"
+  },
+  "601728_A_3mo": {
+    "symbol": "601728",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:37.493800",
+    "data_points": 59,
+    "data_file": "chinese_cache/601728_A_3mo_data.pkl"
+  },
+  "601766_A_3mo": {
+    "symbol": "601766",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:38.441000",
+    "data_points": 59,
+    "data_file": "chinese_cache/601766_A_3mo_data.pkl"
+  },
+  "601788_A_3mo": {
+    "symbol": "601788",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:39.314111",
+    "data_points": 59,
+    "data_file": "chinese_cache/601788_A_3mo_data.pkl"
+  },
+  "601799_A_3mo": {
+    "symbol": "601799",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:40.206661",
+    "data_points": 59,
+    "data_file": "chinese_cache/601799_A_3mo_data.pkl"
+  },
+  "601800_A_3mo": {
+    "symbol": "601800",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:41.096594",
+    "data_points": 59,
+    "data_file": "chinese_cache/601800_A_3mo_data.pkl"
+  },
+  "601816_A_3mo": {
+    "symbol": "601816",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:42.030253",
+    "data_points": 59,
+    "data_file": "chinese_cache/601816_A_3mo_data.pkl"
+  },
+  "601818_A_3mo": {
+    "symbol": "601818",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:42.897359",
+    "data_points": 59,
+    "data_file": "chinese_cache/601818_A_3mo_data.pkl"
+  },
+  "601825_A_3mo": {
+    "symbol": "601825",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:43.750878",
+    "data_points": 59,
+    "data_file": "chinese_cache/601825_A_3mo_data.pkl"
+  },
+  "601838_A_3mo": {
+    "symbol": "601838",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:45.642508",
+    "data_points": 59,
+    "data_file": "chinese_cache/601838_A_3mo_data.pkl"
+  },
+  "601857_A_3mo": {
+    "symbol": "601857",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:46.518160",
+    "data_points": 59,
+    "data_file": "chinese_cache/601857_A_3mo_data.pkl"
+  },
+  "601868_A_3mo": {
+    "symbol": "601868",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:47.427441",
+    "data_points": 59,
+    "data_file": "chinese_cache/601868_A_3mo_data.pkl"
+  },
+  "601872_A_3mo": {
+    "symbol": "601872",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:48.357824",
+    "data_points": 59,
+    "data_file": "chinese_cache/601872_A_3mo_data.pkl"
+  },
+  "601877_A_3mo": {
+    "symbol": "601877",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:49.261012",
+    "data_points": 59,
+    "data_file": "chinese_cache/601877_A_3mo_data.pkl"
+  },
+  "601878_A_3mo": {
+    "symbol": "601878",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:50.176778",
+    "data_points": 59,
+    "data_file": "chinese_cache/601878_A_3mo_data.pkl"
+  },
+  "601881_A_3mo": {
+    "symbol": "601881",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:51.089789",
+    "data_points": 59,
+    "data_file": "chinese_cache/601881_A_3mo_data.pkl"
+  },
+  "601888_A_3mo": {
+    "symbol": "601888",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:51.963637",
+    "data_points": 59,
+    "data_file": "chinese_cache/601888_A_3mo_data.pkl"
+  },
+  "601898_A_3mo": {
+    "symbol": "601898",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:52.835335",
+    "data_points": 59,
+    "data_file": "chinese_cache/601898_A_3mo_data.pkl"
+  },
+  "601899_A_3mo": {
+    "symbol": "601899",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:53.710936",
+    "data_points": 59,
+    "data_file": "chinese_cache/601899_A_3mo_data.pkl"
+  },
+  "601901_A_3mo": {
+    "symbol": "601901",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:55.608017",
+    "data_points": 59,
+    "data_file": "chinese_cache/601901_A_3mo_data.pkl"
+  },
+  "601916_A_3mo": {
+    "symbol": "601916",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:56.466201",
+    "data_points": 59,
+    "data_file": "chinese_cache/601916_A_3mo_data.pkl"
+  },
+  "601919_A_3mo": {
+    "symbol": "601919",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:57.331838",
+    "data_points": 59,
+    "data_file": "chinese_cache/601919_A_3mo_data.pkl"
+  },
+  "601939_A_3mo": {
+    "symbol": "601939",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:58.226782",
+    "data_points": 59,
+    "data_file": "chinese_cache/601939_A_3mo_data.pkl"
+  },
+  "601985_A_3mo": {
+    "symbol": "601985",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:59.090758",
+    "data_points": 59,
+    "data_file": "chinese_cache/601985_A_3mo_data.pkl"
+  },
+  "601988_A_3mo": {
+    "symbol": "601988",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:06:59.965861",
+    "data_points": 59,
+    "data_file": "chinese_cache/601988_A_3mo_data.pkl"
+  },
+  "601995_A_3mo": {
+    "symbol": "601995",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:02.184353",
+    "data_points": 59,
+    "data_file": "chinese_cache/601995_A_3mo_data.pkl"
+  },
+  "601998_A_3mo": {
+    "symbol": "601998",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:03.098443",
+    "data_points": 59,
+    "data_file": "chinese_cache/601998_A_3mo_data.pkl"
+  },
+  "603019_A_3mo": {
+    "symbol": "603019",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:04.007741",
+    "data_points": 59,
+    "data_file": "chinese_cache/603019_A_3mo_data.pkl"
+  },
+  "603195_A_3mo": {
+    "symbol": "603195",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:05.919987",
+    "data_points": 59,
+    "data_file": "chinese_cache/603195_A_3mo_data.pkl"
+  },
+  "603259_A_3mo": {
+    "symbol": "603259",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:06.830225",
+    "data_points": 59,
+    "data_file": "chinese_cache/603259_A_3mo_data.pkl"
+  },
+  "603260_A_3mo": {
+    "symbol": "603260",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:07.769639",
+    "data_points": 59,
+    "data_file": "chinese_cache/603260_A_3mo_data.pkl"
+  },
+  "603288_A_3mo": {
+    "symbol": "603288",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:08.664159",
+    "data_points": 59,
+    "data_file": "chinese_cache/603288_A_3mo_data.pkl"
+  },
+  "603296_A_3mo": {
+    "symbol": "603296",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:09.547112",
+    "data_points": 59,
+    "data_file": "chinese_cache/603296_A_3mo_data.pkl"
+  },
+  "603369_A_3mo": {
+    "symbol": "603369",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:10.410980",
+    "data_points": 59,
+    "data_file": "chinese_cache/603369_A_3mo_data.pkl"
+  },
+  "603392_A_3mo": {
+    "symbol": "603392",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:11.319514",
+    "data_points": 59,
+    "data_file": "chinese_cache/603392_A_3mo_data.pkl"
+  },
+  "603501_A_3mo": {
+    "symbol": "603501",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:12.230602",
+    "data_points": 59,
+    "data_file": "chinese_cache/603501_A_3mo_data.pkl"
+  },
+  "603799_A_3mo": {
+    "symbol": "603799",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:13.094690",
+    "data_points": 59,
+    "data_file": "chinese_cache/603799_A_3mo_data.pkl"
+  },
+  "603806_A_3mo": {
+    "symbol": "603806",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:13.956815",
+    "data_points": 59,
+    "data_file": "chinese_cache/603806_A_3mo_data.pkl"
+  },
+  "603833_A_3mo": {
+    "symbol": "603833",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:15.872870",
+    "data_points": 59,
+    "data_file": "chinese_cache/603833_A_3mo_data.pkl"
+  },
+  "603986_A_3mo": {
+    "symbol": "603986",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:16.782202",
+    "data_points": 59,
+    "data_file": "chinese_cache/603986_A_3mo_data.pkl"
+  },
+  "603993_A_3mo": {
+    "symbol": "603993",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:17.647984",
+    "data_points": 59,
+    "data_file": "chinese_cache/603993_A_3mo_data.pkl"
+  },
+  "605117_A_3mo": {
+    "symbol": "605117",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:18.501707",
+    "data_points": 59,
+    "data_file": "chinese_cache/605117_A_3mo_data.pkl"
+  },
+  "605499_A_3mo": {
+    "symbol": "605499",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:19.411202",
+    "data_points": 59,
+    "data_file": "chinese_cache/605499_A_3mo_data.pkl"
+  },
+  "688008_A_3mo": {
+    "symbol": "688008",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:20.320882",
+    "data_points": 59,
+    "data_file": "chinese_cache/688008_A_3mo_data.pkl"
+  },
+  "688009_A_3mo": {
+    "symbol": "688009",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:21.179827",
+    "data_points": 59,
+    "data_file": "chinese_cache/688009_A_3mo_data.pkl"
+  },
+  "688012_A_3mo": {
+    "symbol": "688012",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:22.037672",
+    "data_points": 59,
+    "data_file": "chinese_cache/688012_A_3mo_data.pkl"
+  },
+  "688036_A_3mo": {
+    "symbol": "688036",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:22.896355",
+    "data_points": 59,
+    "data_file": "chinese_cache/688036_A_3mo_data.pkl"
+  },
+  "688047_A_3mo": {
+    "symbol": "688047",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:23.744384",
+    "data_points": 59,
+    "data_file": "chinese_cache/688047_A_3mo_data.pkl"
+  },
+  "688082_A_3mo": {
+    "symbol": "688082",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:25.595913",
+    "data_points": 59,
+    "data_file": "chinese_cache/688082_A_3mo_data.pkl"
+  },
+  "688111_A_3mo": {
+    "symbol": "688111",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:26.506693",
+    "data_points": 59,
+    "data_file": "chinese_cache/688111_A_3mo_data.pkl"
+  },
+  "688126_A_3mo": {
+    "symbol": "688126",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:27.357532",
+    "data_points": 59,
+    "data_file": "chinese_cache/688126_A_3mo_data.pkl"
+  },
+  "688169_A_3mo": {
+    "symbol": "688169",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:28.235995",
+    "data_points": 59,
+    "data_file": "chinese_cache/688169_A_3mo_data.pkl"
+  },
+  "688187_A_3mo": {
+    "symbol": "688187",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:29.144928",
+    "data_points": 59,
+    "data_file": "chinese_cache/688187_A_3mo_data.pkl"
+  },
+  "688223_A_3mo": {
+    "symbol": "688223",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:30.053427",
+    "data_points": 59,
+    "data_file": "chinese_cache/688223_A_3mo_data.pkl"
+  },
+  "688271_A_3mo": {
+    "symbol": "688271",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:30.958867",
+    "data_points": 59,
+    "data_file": "chinese_cache/688271_A_3mo_data.pkl"
+  },
+  "688303_A_3mo": {
+    "symbol": "688303",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:31.867067",
+    "data_points": 59,
+    "data_file": "chinese_cache/688303_A_3mo_data.pkl"
+  },
+  "688396_A_3mo": {
+    "symbol": "688396",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:32.719785",
+    "data_points": 59,
+    "data_file": "chinese_cache/688396_A_3mo_data.pkl"
+  },
+  "688472_A_3mo": {
+    "symbol": "688472",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:33.568349",
+    "data_points": 59,
+    "data_file": "chinese_cache/688472_A_3mo_data.pkl"
+  },
+  "688506_A_3mo": {
+    "symbol": "688506",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:35.418157",
+    "data_points": 59,
+    "data_file": "chinese_cache/688506_A_3mo_data.pkl"
+  },
+  "688599_A_3mo": {
+    "symbol": "688599",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:36.327200",
+    "data_points": 59,
+    "data_file": "chinese_cache/688599_A_3mo_data.pkl"
+  },
+  "688981_A_3mo": {
+    "symbol": "688981",
+    "market": "A",
+    "period": "3mo",
+    "timestamp": "2026-02-28T11:07:37.229604",
+    "data_points": 59,
+    "data_file": "chinese_cache/688981_A_3mo_data.pkl"
+  }
+}
