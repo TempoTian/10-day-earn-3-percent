@@ -15,5 +15,9 @@ This is a Python CLI stock trading AI application ("10Day-Earn-3%"). There is no
 - **`requirements.txt` pins `numpy==1.24.3`** which is incompatible with the system Python 3.12. The update script installs packages without version pins so pip resolves compatible versions. Do not run `pip install -r requirements.txt` directly.
 - **Internet access required**: all analysis fetches live data from Yahoo Finance via `yfinance`. No offline/mock mode exists.
 - **No tests or linting**: the repo has no test suite (`pytest`, `unittest`, etc.) and no linter config (`flake8`, `ruff`, `mypy`). Validation is done by importing modules and running analysis functions.
-- **Model artifacts**: trained ML models are saved under `us_models/` and `chinese_models/`. These directories are created at runtime.
+- **Model artifacts**: trained ML models are saved under `us_models/` and `chinese_models/`. These directories are created at runtime. Delete `.pkl` files to force retraining.
 - **Cache**: Chinese stock data is cached in `chinese_cache/` (auto-created).
+
+### ML architecture notes
+
+All three analyzers use the same ensemble pattern: `Pipeline(RobustScaler -> SelectKBest -> VotingClassifier(RF + GB + LR))`. Features are intentionally restricted to normalized/relative values (ratios, returns, indicator readings) to avoid feature leakage from absolute price levels. When adding new features, ensure they don't depend on absolute stock price.

@@ -452,13 +452,13 @@ class ChineseStockAnalyzer:
     
     def prepare_ml_data(self, holding_period=10, profit_threshold=0.03):
         """
-        Prepare data for machine learning model
+        Prepare data for machine learning model, handling inf/nan values
         """
         features = self.create_ml_features()
         target = self.create_target_variable(holding_period, profit_threshold)
         
-        # Remove rows with NaN values
-        ml_data = self.data[features + [target]].dropna()
+        ml_data = self.data[features + [target]].copy()
+        ml_data = ml_data.replace([np.inf, -np.inf], np.nan).dropna()
         
         X = ml_data[features]
         y = ml_data[target]
@@ -603,24 +603,20 @@ class ChineseStockAnalyzer:
         
         try:
             features = self.create_ml_features()
-            X = self.data[features].dropna()
+            X = self.data[features].replace([np.inf, -np.inf], np.nan).dropna()
             
             if len(X) == 0:
                 return None, None
             
-            # Get the most recent data point
             current_features = X.iloc[-1:].values
             
-            # Check if we have valid features (handle non-numeric data)
             try:
                 current_features_numeric = current_features.astype(float)
                 if np.isnan(current_features_numeric).any():
                     return None, None
             except (ValueError, TypeError):
-                # If conversion fails, assume data is valid (contains boolean features)
                 pass
             
-            # Use pipeline for prediction (includes scaling and feature selection)
             probability = self.model.predict_proba(current_features)[0][1]
             prediction = 1 if probability > 0.30 else 0
             return prediction, probability

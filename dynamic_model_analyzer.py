@@ -217,13 +217,13 @@ class DynamicModelAnalyzer:
     
     def prepare_ml_data(self, holding_period=10, profit_threshold=0.03):
         """
-        Prepare data for machine learning model
+        Prepare data for machine learning model, handling inf/nan values
         """
         features = self.create_features()
         target = self.create_target_variable(holding_period, profit_threshold)
         
-        # Remove rows with NaN values
-        ml_data = self.data[features + [target]].dropna()
+        ml_data = self.data[features + [target]].copy()
+        ml_data = ml_data.replace([np.inf, -np.inf], np.nan).dropna()
         
         X = ml_data[features]
         y = ml_data[target]
