@@ -353,6 +353,15 @@ class ChineseStockDownloader:
         new_source = new_source.lower()
         if new_source in ['yfinance', 'akshare']:
             self.data_source = new_source
+            if new_source == 'akshare' and not hasattr(self, 'ak'):
+                try:
+                    import akshare as ak
+                    self.ak = ak
+                    print(f"✅ akshare imported successfully")
+                except ImportError:
+                    print(f"❌ akshare not available, staying on yfinance")
+                    self.data_source = 'yfinance'
+                    return False
             print(f"✅ Switched to {new_source}")
             return True
         else:
