@@ -314,6 +314,67 @@ class ChineseStockAnalyzer:
             price_range = data['high'] - data['low']
             data['Body_Ratio'] = (data['close'] - data['open']) / price_range.replace(0, np.nan)
             
+            # ===== 筹码集中度 (Chip Concentration) proxy features =====
+            # These approximate accumulation/distribution patterns from OHLCV data.
+            # True chip data (股东户数) requires East Money / akshare special APIs.
+            
+            # 1. Price Consolidation Index — tight range = chips being collected
+            #    (low ATR relative to recent average means price is consolidating)
+            atr_mean_50 = data['ATR'].rolling(window=50).mean()
+            data['Chip_Consolidation'] = 1 - (data['ATR'] / atr_mean_50).clip(upper=2)
+            
+            # 2. Volume Shrink During Consolidation — declining volume + tight range
+            #    is the classic accumulation (吸筹) pattern
+            vol_trend_20 = data['volume'].rolling(window=20).apply(
+                lambda x: np.polyfit(range(len(x)), x, 1)[0] / (x.mean() + 1e-10) if len(x) == 20 else 0,
+                raw=False
+            )
+            price_range_norm = (data['high'].rolling(20).max() - data['low'].rolling(20).min()) / data['close']
+            data['Chip_Accumulation'] = (-vol_trend_20) * (1 - price_range_norm.clip(upper=1))
+            
+            # 3. Chaikin Money Flow (CMF) — measures buying/selling pressure
+            #    Positive CMF = money flowing in = accumulation
+            mfv = ((data['close'] - data['low']) - (data['high'] - data['close'])) / \
+                  (data['high'] - data['low']).replace(0, np.nan) * data['volume']
+            data['CMF_20'] = mfv.rolling(window=20).sum() / data['volume'].rolling(window=20).sum()
+            
+            # 4. Volume Concentration Ratio — ratio of volume on narrow-range days
+            #    vs wide-range days. High ratio = stealth accumulation
+            median_range = price_range.rolling(window=20).median()
+            narrow_mask = (price_range < median_range).astype(float)
+            wide_mask = (price_range >= median_range).astype(float)
+            narrow_vol = (data['volume'] * narrow_mask).rolling(window=20).sum()
+            wide_vol = (data['volume'] * wide_mask).rolling(window=20).sum()
+            data['Chip_Vol_Concentration'] = narrow_vol / wide_vol.replace(0, np.nan)
+            
+            # 5. Smart Money Indicator — large-volume days with small price change
+            #    suggest institutional accumulation (big volume, small move = absorbing supply)
+            abs_return = data['Returns'].abs()
+            median_return = abs_return.rolling(window=20).median()
+            median_vol = data['volume'].rolling(window=20).median()
+            smart_money_day = ((data['volume'] > median_vol * 1.5) & (abs_return < median_return)).astype(float)
+            data['Chip_Smart_Money'] = smart_money_day.rolling(window=20).mean()
+            
+            # 6. Turnover Decline Trend — steadily declining turnover during
+            #    sideways price = chips moving from weak hands to strong hands
+            if 'turnover_rate' in data.columns:
+                turnover = pd.to_numeric(data['turnover_rate'], errors='coerce')
+            else:
+                turnover = data['volume'] / data['volume'].rolling(window=250).mean()
+            turnover_slope = turnover.rolling(window=20).apply(
+                lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) == 20 else 0,
+                raw=False
+            )
+            data['Chip_Turnover_Decline'] = -turnover_slope
+            
+            # 7. Price-Volume Divergence Score — price flat/up but volume declining
+            #    is a strong accumulation signal
+            price_slope = data['close'].rolling(window=20).apply(
+                lambda x: np.polyfit(range(len(x)), x / x.iloc[0], 1)[0] if len(x) == 20 else 0,
+                raw=False
+            )
+            data['Chip_PV_Divergence'] = price_slope * data['Chip_Turnover_Decline']
+            
             self.data = data
             print("Chinese market indicators calculated successfully!")
             return True
@@ -362,6 +423,10 @@ class ChineseStockAnalyzer:
                 'Bull_Market', 'Bear_Market',
                 # Candle pattern
                 'Body_Ratio',
+                # 筹码集中度 (Chip Concentration) proxy features
+                'Chip_Consolidation', 'Chip_Accumulation', 'CMF_20',
+                'Chip_Vol_Concentration', 'Chip_Smart_Money',
+                'Chip_Turnover_Decline', 'Chip_PV_Divergence',
             ]
             
             # Only keep features that exist in the data
