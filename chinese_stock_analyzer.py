@@ -465,6 +465,85 @@ class ChineseStockAnalyzer:
         
         return X, y
     
+    def walk_forward_validate(self, holding_period=10, profit_threshold=0.03, step=30):
+        """
+        Walk-forward validation: train on expanding window, predict next `step` days,
+        roll forward. Returns a dict of honest reliability metrics.
+        """
+        try:
+            X, y = self.prepare_ml_data(holding_period, profit_threshold)
+            if len(X) < 150:
+                return None
+
+            window_size = int(len(X) * 0.6)
+            all_true, all_pred, all_prob = [], [], []
+
+            for start in range(window_size, len(X) - step, step):
+                X_train = X.iloc[:start]
+                y_train = y.iloc[:start]
+                X_test = X.iloc[start:start + step]
+                y_test = y.iloc[start:start + step]
+
+                if len(X_test) == 0 or len(y_train.unique()) < 2:
+                    continue
+
+                model = self.create_advanced_pipeline()
+                try:
+                    model.fit(X_train, y_train)
+                    probs = model.predict_proba(X_test)[:, 1]
+                    preds = (probs > 0.30).astype(int)
+                    all_true.extend(y_test.values)
+                    all_pred.extend(preds)
+                    all_prob.extend(probs)
+                except Exception:
+                    continue
+
+            if len(all_true) == 0:
+                return None
+
+            all_true = np.array(all_true)
+            all_pred = np.array(all_pred)
+            all_prob = np.array(all_prob)
+
+            accuracy = (all_true == all_pred).mean()
+            naive_acc = (all_true == 0).mean()
+            edge = accuracy - naive_acc
+
+            buy_mask = all_pred == 1
+            buy_count = int(buy_mask.sum())
+            buy_precision = float(all_true[buy_mask].mean()) if buy_count > 0 else 0.0
+
+            gain_mask = all_true == 1
+            buy_recall = float(all_pred[gain_mask].mean()) if gain_mask.sum() > 0 else 0.0
+
+            # Calibration for high-confidence bucket (>= 60%)
+            high_conf_mask = all_prob >= 0.6
+            high_conf_actual = float(all_true[high_conf_mask].mean()) if high_conf_mask.sum() > 2 else None
+
+            if edge > 0.03 and buy_precision > 0.35:
+                reliability = 'GOOD'
+            elif edge > 0 and buy_precision > 0.25:
+                reliability = 'MODERATE'
+            elif edge > -0.03:
+                reliability = 'WEAK'
+            else:
+                reliability = 'POOR'
+
+            return {
+                'wf_samples': len(all_true),
+                'wf_accuracy': round(accuracy, 3),
+                'wf_baseline': round(naive_acc, 3),
+                'wf_edge': round(edge, 3),
+                'wf_buy_count': buy_count,
+                'wf_buy_precision': round(buy_precision, 3),
+                'wf_buy_recall': round(buy_recall, 3),
+                'wf_high_conf_actual': round(high_conf_actual, 3) if high_conf_actual is not None else None,
+                'wf_reliability': reliability,
+            }
+        except Exception as e:
+            print(f"⚠️  Walk-forward validation error: {e}")
+            return None
+
     def train_ml_model(self, holding_period=10, profit_threshold=0.03):
         """
         Train advanced machine learning model for Chinese stocks (ENHANCED)

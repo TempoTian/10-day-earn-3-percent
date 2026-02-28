@@ -705,7 +705,34 @@ class ChineseStockRecommender:
         
         # Sort by final score and return top N
         final_recommendations.sort(key=lambda x: x['final_score'], reverse=True)
-        return final_recommendations[:top_n]
+        top_recs = final_recommendations[:top_n]
+        
+        # Run walk-forward validation on top picks for reliability assessment
+        print(f"\n📈 Running walk-forward validation on top {len(top_recs)} picks...")
+        for i, rec in enumerate(top_recs, 1):
+            print(f"   🔄 Validating {rec['symbol']} ({i}/{len(top_recs)})...")
+            try:
+                wf_analyzer = ChineseStockAnalyzer(self.downloader.data_source)
+                ok, _ = wf_analyzer.download_chinese_stock_data(rec['symbol'], rec['market'], '2y')
+                if ok:
+                    wf_analyzer.calculate_chinese_indicators()
+                    wf_result = wf_analyzer.walk_forward_validate()
+                    if wf_result:
+                        for k, v in wf_result.items():
+                            rec[k] = v
+                        print(f"      ✅ {rec['symbol']}: edge={wf_result['wf_edge']:+.1%}, "
+                              f"buy_precision={wf_result['wf_buy_precision']:.0%}, "
+                              f"reliability={wf_result['wf_reliability']}")
+                    else:
+                        rec['wf_reliability'] = 'N/A'
+                        print(f"      ⚠️  {rec['symbol']}: insufficient data for walk-forward")
+                else:
+                    rec['wf_reliability'] = 'N/A'
+            except Exception as e:
+                rec['wf_reliability'] = 'N/A'
+                print(f"      ⚠️  {rec['symbol']}: walk-forward failed ({e})")
+        
+        return top_recs
     
     def display_recommendations(self, recommendations):
         """Display final recommendations"""
@@ -754,8 +781,26 @@ class ChineseStockRecommender:
             
             if rec['reasons']:
                 print(f"   ✅ Key Strengths:")
-                for reason in rec['reasons'][:3]:  # Show top 3 reasons
+                for reason in rec['reasons'][:3]:
                     print(f"      • {reason}")
+            
+            # Walk-forward reliability section
+            wf_rel = rec.get('wf_reliability', 'N/A')
+            if wf_rel != 'N/A':
+                rel_emoji = {'GOOD': '🟢', 'MODERATE': '🟡', 'WEAK': '🟠', 'POOR': '🔴'}.get(wf_rel, '⚪')
+                print(f"   {'-'*40}")
+                print(f"   📉 WALK-FORWARD RELIABILITY: {rel_emoji} {wf_rel}")
+                edge = rec.get('wf_edge', 0)
+                edge_sign = '+' if edge >= 0 else ''
+                print(f"      Edge vs baseline: {edge_sign}{edge:.1%}")
+                print(f"      BUY precision: {rec.get('wf_buy_precision', 0):.0%} "
+                      f"({rec.get('wf_buy_count', 0)} signals out of {rec.get('wf_samples', 0)} days)")
+                print(f"      BUY recall: {rec.get('wf_buy_recall', 0):.0%}")
+                hc = rec.get('wf_high_conf_actual')
+                if hc is not None:
+                    print(f"      High-conf (≥60%) actual: {hc:.0%}")
+            else:
+                print(f"   📉 Walk-forward: N/A (insufficient data)")
             
             print(f"   {'-'*60}")
         
@@ -767,6 +812,25 @@ class ChineseStockRecommender:
         print(f"   🚀 Strong Buy: {strong_buy}")
         print(f"   📈 Buy: {buy}")
         print(f"   ⏸️  Hold: {hold}")
+        
+        # Walk-forward summary
+        wf_stocks = [r for r in recommendations if r.get('wf_reliability') not in (None, 'N/A')]
+        if wf_stocks:
+            good = sum(1 for r in wf_stocks if r.get('wf_reliability') == 'GOOD')
+            moderate = sum(1 for r in wf_stocks if r.get('wf_reliability') == 'MODERATE')
+            weak = sum(1 for r in wf_stocks if r.get('wf_reliability') == 'WEAK')
+            poor = sum(1 for r in wf_stocks if r.get('wf_reliability') == 'POOR')
+            print(f"\n📉 Walk-Forward Reliability:")
+            print(f"   🟢 GOOD: {good}  🟡 MODERATE: {moderate}  🟠 WEAK: {weak}  🔴 POOR: {poor}")
+            avg_edge = sum(r.get('wf_edge', 0) for r in wf_stocks) / len(wf_stocks)
+            avg_prec = sum(r.get('wf_buy_precision', 0) for r in wf_stocks) / len(wf_stocks)
+            print(f"   Avg edge: {avg_edge:+.1%} | Avg BUY precision: {avg_prec:.0%}")
+            if avg_edge > 0.02 and avg_prec > 0.35:
+                print(f"   ✅ Walk-forward suggests signals have SOME predictive value")
+            elif avg_edge > -0.03:
+                print(f"   ⚠️  Walk-forward suggests signals are MARGINAL — use with caution")
+            else:
+                print(f"   ❌ Walk-forward suggests signals are UNRELIABLE for trading")
         
         if strong_buy > 0:
             print(f"\n🎯 RECOMMENDED ACTION: Focus on STRONG BUY stocks for best potential returns!")
