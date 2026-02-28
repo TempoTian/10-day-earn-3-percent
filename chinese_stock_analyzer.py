@@ -1244,6 +1244,14 @@ class ChineseStockAnalyzer:
         # Generate sell recommendation
         recommendation = self.generate_chinese_sell_recommendation(sell_analysis, current_return, buy_price, market)
         
+        # Walk-forward validation for sell signals
+        sell_wf = self.walk_forward_validate_sell(buy_price)
+        if sell_wf:
+            recommendation.update(sell_wf)
+            print(f"📉 Sell WF: edge={sell_wf['sell_wf_edge']:+.1%}, "
+                  f"sell_precision={sell_wf['sell_wf_sell_precision']:.0%}, "
+                  f"rating={sell_wf['sell_wf_rating']}")
+        
         return {
             'symbol': symbol,
             'market': market,
@@ -1252,17 +1260,21 @@ class ChineseStockAnalyzer:
             'current_return': current_return,
             'sell_analysis': sell_analysis,
             'recommendation': recommendation,
-            'stock_name': stock_name # Add stock_name to the result
+            'stock_name': stock_name
         }
     
     def analyze_chinese_sell_signals(self, buy_price, market='A'):
         """
-        Analyze sell signals specific to Chinese markets with ML integration
+        Enhanced sell signal analysis combining profit management rules,
+        distribution detection (chip features), and ML downside prediction.
         """
         if self.data is None or len(self.data) < 20:
             return None
         
         current = self.data.iloc[-1]
+        current_price = current['close']
+        current_return = (current_price - buy_price) / buy_price
+        
         analysis = {
             'technical_score': 0,
             'ml_score': 0,
@@ -1278,217 +1290,312 @@ class ChineseStockAnalyzer:
             'limit_down_near': False
         }
         
-        # Calculate technical sell score
-        tech_score = self.calculate_chinese_sell_technical_score()
-        analysis['technical_score'] = tech_score
+        # ===== 1. PROFIT / LOSS MANAGEMENT (most reliable) =====
+        # Trailing stop: check if price has dropped from recent peak
+        if len(self.data) >= 10:
+            recent_peak = self.data['close'].iloc[-10:].max()
+            drawdown_from_peak = (current_price - recent_peak) / recent_peak
+            if drawdown_from_peak < -0.05:
+                analysis['sell_signals'].append(f"Trailing stop: -{abs(drawdown_from_peak):.1%} from 10d peak (¥{recent_peak:.2f})")
+                analysis['risk_factors'].append("Price falling from recent peak")
+            elif drawdown_from_peak < -0.03:
+                analysis['sell_signals'].append(f"Approaching trailing stop: {drawdown_from_peak:.1%} from 10d peak")
         
-        # Try to get ML prediction
+        if current_return >= 0.08:
+            analysis['sell_signals'].append(f"Strong profit target reached ({current_return:.1%}) — consider taking profit")
+            analysis['profit_potential'] = current_return
+        elif current_return >= 0.05:
+            analysis['sell_signals'].append(f"Profit target reached ({current_return:.1%})")
+            analysis['profit_potential'] = current_return
+        elif current_return >= 0.03:
+            analysis['hold_signals'].append(f"Moderate profit ({current_return:.1%}) — watch for exit signals")
+            analysis['profit_potential'] = current_return
+        
+        if current_return <= -0.05:
+            analysis['sell_signals'].append(f"Stop loss triggered ({current_return:.1%})")
+            analysis['stop_loss_triggered'] = True
+            analysis['risk_factors'].append("Significant loss — cut losses")
+        elif current_return <= -0.03:
+            analysis['sell_signals'].append(f"Approaching stop loss ({current_return:.1%})")
+            analysis['risk_factors'].append("Loss position")
+        
+        # ===== 2. DISTRIBUTION DETECTION (chip features) =====
+        cmf = current.get('CMF_20')
+        if cmf is not None and not np.isnan(cmf):
+            if cmf < -0.15:
+                analysis['sell_signals'].append(f"Strong money outflow (CMF={cmf:.2f}) — distribution")
+            elif cmf < -0.05:
+                analysis['sell_signals'].append(f"Money outflow detected (CMF={cmf:.2f})")
+            elif cmf > 0.15:
+                analysis['hold_signals'].append(f"Strong money inflow (CMF={cmf:.2f}) — accumulation")
+            elif cmf > 0.05:
+                analysis['hold_signals'].append(f"Money inflow detected (CMF={cmf:.2f})")
+        
+        smart_money = current.get('Chip_Smart_Money')
+        if smart_money is not None and not np.isnan(smart_money):
+            if smart_money > 0.3:
+                analysis['hold_signals'].append("Smart money accumulation detected")
+            elif smart_money < 0.05:
+                analysis['sell_signals'].append("No smart money activity — weak support")
+        
+        chip_accum = current.get('Chip_Accumulation')
+        if chip_accum is not None and not np.isnan(chip_accum):
+            if chip_accum < -0.5:
+                analysis['sell_signals'].append("Volume rising during consolidation — potential distribution")
+        
+        # ===== 3. ML PREDICTION =====
+        ml_prediction, ml_probability = None, None
         try:
-            # Ensure we have a model for this stock
             if self.model is None:
-                # Try to load existing model
                 if not self.load_model(self.symbol, market):
-                    # Train new model if loading fails
                     print(f"Training new ML model for {self.symbol}...")
                     self.train_ml_model(holding_period=10, profit_threshold=0.03)
             
-            # Get ML prediction
             ml_prediction, ml_probability = self.get_ml_prediction()
             analysis['ml_prediction'] = ml_prediction
             analysis['ml_probability'] = ml_probability
             
-            # Calculate ML score for sell analysis
             if ml_probability is not None:
-                # Convert ML probability to sell score (0-100)
-                # Higher probability of price increase = lower sell score
-                ml_score = int((1 - ml_probability) * 100)
-                analysis['ml_score'] = ml_score
-                
-                # Combine technical and ML scores (70% technical, 30% ML)
-                combined_score = int(0.7 * tech_score + 0.3 * ml_score)
-                analysis['combined_score'] = combined_score
+                ml_sell_score = int((1 - ml_probability) * 100)
+                analysis['ml_score'] = ml_sell_score
+                if ml_probability < 0.25:
+                    analysis['sell_signals'].append(f"ML predicts strong decline ({ml_probability:.0%} rise prob)")
+                elif ml_probability < 0.4:
+                    analysis['sell_signals'].append(f"ML predicts decline ({ml_probability:.0%} rise prob)")
+                elif ml_probability > 0.7:
+                    analysis['hold_signals'].append(f"ML predicts strong rise ({ml_probability:.0%} rise prob)")
+                elif ml_probability > 0.55:
+                    analysis['hold_signals'].append(f"ML predicts rise ({ml_probability:.0%} rise prob)")
             else:
-                # If ML not available, use technical score only
-                analysis['combined_score'] = tech_score
-                print(f"⚠️  ML prediction not available for {self.symbol}, using technical score only")
-                
+                print(f"⚠️  ML prediction not available for {self.symbol}")
         except Exception as e:
-            print(f"⚠️  ML analysis failed for {self.symbol}: {str(e)}")
-            # Use technical score only if ML fails
-            analysis['combined_score'] = tech_score
+            print(f"⚠️  ML analysis failed for {self.symbol}: {e}")
         
-        # Current return analysis
-        current_return = (current['close'] - buy_price) / buy_price
+        # ===== 4. TECHNICAL SIGNALS (supplementary) =====
+        tech_score = self.calculate_chinese_sell_technical_score(current_return)
+        analysis['technical_score'] = tech_score
         
-        # Profit target analysis (Chinese markets often have different targets)
-        if current_return >= 0.05:  # 5% profit target for Chinese markets
-            analysis['sell_signals'].append("Profit target reached (5%+)")
-            analysis['profit_potential'] = current_return
-        elif current_return >= 0.03:  # 3% profit target
-            analysis['sell_signals'].append("Moderate profit target reached (3%+)")
-            analysis['profit_potential'] = current_return
+        # Momentum
+        mom5 = current.get('Price_Momentum_5', 0)
+        mom3 = current.get('Price_Momentum_3', 0)
+        if not np.isnan(mom5) and not np.isnan(mom3):
+            if mom5 < -0.05 and mom3 < -0.03:
+                analysis['sell_signals'].append("Multi-timeframe momentum negative")
+            elif mom5 > 0.05 and mom3 > 0.02:
+                analysis['hold_signals'].append("Multi-timeframe momentum positive")
         
-        # Stop loss analysis
-        if current_return <= -0.03:  # 3% stop loss for Chinese markets
-            analysis['sell_signals'].append("Stop loss triggered (-3%+)")
-            analysis['stop_loss_triggered'] = True
-            analysis['risk_factors'].append("Significant loss position")
-        elif current_return <= -0.02:  # 2% stop loss
-            analysis['sell_signals'].append("Approaching stop loss (-2%+)")
-            analysis['risk_factors'].append("Loss position")
+        # RSI divergence: price making new high but RSI is lower
+        if len(self.data) >= 20:
+            rsi_now = current.get('RSI', 50)
+            price_20d_high = self.data['close'].iloc[-20:].max()
+            rsi_at_high = self.data['RSI'].iloc[-20:].max() if 'RSI' in self.data else 50
+            if not np.isnan(rsi_now) and not np.isnan(rsi_at_high):
+                if current_price >= price_20d_high * 0.99 and rsi_now < rsi_at_high - 10:
+                    analysis['sell_signals'].append(f"Bearish RSI divergence (price near high but RSI weaker)")
         
-        # ML-based signals
-        if ml_probability is not None:
-            if ml_probability < 0.3:
-                analysis['sell_signals'].append(f"ML predicts strong decline (prob: {ml_probability:.1%})")
-            elif ml_probability < 0.4:
-                analysis['sell_signals'].append(f"ML predicts moderate decline (prob: {ml_probability:.1%})")
-            elif ml_probability > 0.7:
-                analysis['hold_signals'].append(f"ML predicts strong rise (prob: {ml_probability:.1%})")
-            elif ml_probability > 0.6:
-                analysis['hold_signals'].append(f"ML predicts moderate rise (prob: {ml_probability:.1%})")
+        # MA crossover: SMA_20 crossing below SMA_50 (death cross)
+        if len(self.data) >= 2:
+            sma20_now = current.get('SMA_20')
+            sma50_now = current.get('SMA_50')
+            prev = self.data.iloc[-2]
+            sma20_prev = prev.get('SMA_20')
+            sma50_prev = prev.get('SMA_50')
+            if all(v is not None and not np.isnan(v) for v in [sma20_now, sma50_now, sma20_prev, sma50_prev]):
+                if sma20_prev >= sma50_prev and sma20_now < sma50_now:
+                    analysis['sell_signals'].append("Death cross: SMA_20 crossed below SMA_50")
+                elif sma20_prev <= sma50_prev and sma20_now > sma50_now:
+                    analysis['hold_signals'].append("Golden cross: SMA_20 crossed above SMA_50")
         
-        # Chinese market specific analysis
-        if market.upper() == 'A':
-            # A-shares specific signals
-            if current['Volume_Ratio'] > 3.0:
-                analysis['sell_signals'].append("Extremely high volume - potential distribution")
-            elif current['Volume_Ratio'] > 2.0:
-                analysis['sell_signals'].append("High volume - monitor closely")
-            
-            # Limit up/down analysis for A-shares
-            if hasattr(current, 'Near_Limit_Up') and current['Near_Limit_Up'] > 95:
-                analysis['limit_up_near'] = True
-                analysis['sell_signals'].append("Near limit up - high risk of reversal")
-            elif hasattr(current, 'Near_Limit_Down') and current['Near_Limit_Down'] < -95:
-                analysis['limit_down_near'] = True
-                analysis['hold_signals'].append("Near limit down - potential bounce")
+        # Volatility spike
+        avg_vol = self.data['Volatility_20'].mean() if 'Volatility_20' in self.data else 0
+        cur_vol = current.get('Volatility_20', 0)
+        if not np.isnan(cur_vol) and not np.isnan(avg_vol) and avg_vol > 0:
+            if cur_vol > avg_vol * 2:
+                analysis['risk_factors'].append(f"Volatility spike ({cur_vol/avg_vol:.1f}x average)")
         
-        # Technical indicator analysis
-        if current['Price_Momentum_5'] < -0.05:
-            analysis['sell_signals'].append("Strong negative 5-day momentum")
-        elif current['Price_Momentum_5'] < -0.02:
-            analysis['sell_signals'].append("Negative 5-day momentum")
-        elif current['Price_Momentum_5'] > 0.05:
-            analysis['hold_signals'].append("Strong positive 5-day momentum")
-        elif current['Price_Momentum_5'] > 0.02:
-            analysis['hold_signals'].append("Positive 5-day momentum")
+        # ===== 5. COMBINED SCORE =====
+        # Weight: 40% profit management, 30% ML, 20% technical, 10% distribution
+        profit_score = 50
+        if current_return >= 0.08: profit_score = 85
+        elif current_return >= 0.05: profit_score = 75
+        elif current_return >= 0.03: profit_score = 60
+        elif current_return <= -0.05: profit_score = 95
+        elif current_return <= -0.03: profit_score = 80
+        elif current_return <= -0.01: profit_score = 60
         
-        # Moving average analysis
-        if current['close'] < current['SMA_20']:
-            analysis['sell_signals'].append("Price below 20-day SMA")
-        else:
-            analysis['hold_signals'].append("Price above 20-day SMA")
+        ml_sell_score = analysis.get('ml_score', 50)
         
-        if current['close'] < current['SMA_50']:
-            analysis['sell_signals'].append("Price below 50-day SMA")
-        else:
-            analysis['hold_signals'].append("Price above 50-day SMA")
+        dist_score = 50
+        if cmf is not None and not np.isnan(cmf):
+            dist_score = max(0, min(100, 50 - int(cmf * 200)))
         
-        # Volume analysis
-        if current['Volume_Ratio'] > 1.5:
-            analysis['sell_signals'].append("High volume - potential distribution")
-        elif current['Volume_Ratio'] < 0.5:
-            analysis['hold_signals'].append("Low volume - accumulation possible")
-        
-        # Volatility analysis
-        avg_volatility = self.data['Volatility_20'].mean()
-        if current['Volatility_20'] > avg_volatility * 1.5:
-            analysis['risk_factors'].append("High volatility - increased risk")
-        elif current['Volatility_20'] < avg_volatility * 0.5:
-            analysis['hold_signals'].append("Low volatility - stable conditions")
+        combined = int(0.40 * profit_score + 0.30 * ml_sell_score + 0.20 * tech_score + 0.10 * dist_score)
+        analysis['combined_score'] = max(0, min(100, combined))
+        analysis['profit_score'] = profit_score
+        analysis['distribution_score'] = dist_score
         
         return analysis
     
-    def calculate_chinese_sell_technical_score(self):
+    def calculate_chinese_sell_technical_score(self, current_return=0):
         """
-        Calculate technical score for Chinese stock sell decision (0-100)
-        Higher score = stronger sell signal
+        Enhanced technical sell score (0-100). Higher = stronger sell signal.
+        Incorporates multi-timeframe analysis and chip distribution cues.
         """
         if self.data is None or len(self.data) < 20:
             return 50
         
         current = self.data.iloc[-1]
-        score = 50  # Neutral base score
+        score = 50
         
-        # Momentum analysis (negative momentum = sell signal)
-        momentum_5 = current['Price_Momentum_5']
-        if momentum_5 < -0.05:
-            score += 25  # Strong sell signal
-        elif momentum_5 < -0.02:
-            score += 15  # Moderate sell signal
-        elif momentum_5 > 0.05:
-            score -= 20  # Strong buy signal (hold) - but don't go below 0
-        elif momentum_5 > 0.02:
-            score -= 10  # Moderate buy signal (hold)
+        # Multi-timeframe momentum (more reliable than single timeframe)
+        for col, weight in [('Price_Momentum_3', 8), ('Price_Momentum_5', 10), ('Price_Momentum_10', 7)]:
+            val = current.get(col, 0)
+            if val is not None and not np.isnan(val):
+                if val < -0.05: score += weight
+                elif val < -0.02: score += weight // 2
+                elif val > 0.05: score -= weight
+                elif val > 0.02: score -= weight // 2
         
-        # Moving average analysis (below MA = sell signal)
+        # Price vs MAs
         price = current['close']
-        sma_20 = current['SMA_20']
-        sma_50 = current['SMA_50']
+        for ma_col, weight in [('SMA_20', 8), ('SMA_50', 8)]:
+            ma_val = current.get(ma_col)
+            if ma_val is not None and not np.isnan(ma_val):
+                if price < ma_val: score += weight
+                else: score -= weight // 2
         
-        if price < sma_20:
-            score += 15  # Below short-term MA
-        else:
-            score -= 10  # Above short-term MA
+        # RSI with overbought emphasis
+        rsi = current.get('RSI', 50)
+        if not np.isnan(rsi):
+            if rsi > 80: score += 15
+            elif rsi > 70: score += 10
+            elif rsi < 25: score -= 12
+            elif rsi < 35: score -= 8
         
-        if price < sma_50:
-            score += 15  # Below long-term MA
-        else:
-            score -= 10  # Above long-term MA
+        # Stochastic overbought
+        stoch_k = current.get('Stoch_K', 50)
+        if not np.isnan(stoch_k):
+            if stoch_k > 85: score += 8
+            elif stoch_k < 15: score -= 8
         
-        # Volume analysis (high volume often precedes decline)
-        volume_ratio = current['Volume_Ratio']
-        if volume_ratio > 2.0:
-            score += 15  # High volume - potential distribution
-        elif volume_ratio > 1.5:
-            score += 10  # Moderate high volume
-        elif volume_ratio < 0.5:
-            score -= 5   # Low volume - accumulation possible
+        # ADX: strong trend + DI_Minus > DI_Plus = bearish trend
+        adx = current.get('ADX', 0)
+        di_plus = current.get('DI_Plus', 0)
+        di_minus = current.get('DI_Minus', 0)
+        if all(not np.isnan(v) for v in [adx, di_plus, di_minus] if v is not None):
+            if adx > 25 and di_minus > di_plus:
+                score += 10
+            elif adx > 25 and di_plus > di_minus:
+                score -= 8
         
-        # Volatility analysis (high volatility = increased risk)
-        avg_volatility = self.data['Volatility_20'].mean()
-        current_volatility = current['Volatility_20']
-        if current_volatility > avg_volatility * 1.5:
-            score += 15  # High volatility - increased risk
-        elif current_volatility > avg_volatility * 1.2:
-            score += 10  # Moderate high volatility
-        elif current_volatility < avg_volatility * 0.5:
-            score -= 5   # Low volatility - stable conditions
+        # Volume-price divergence (price up + volume down = distribution)
+        vpd = current.get('Vol_Price_Divergence', 0)
+        if vpd is not None and not np.isnan(vpd):
+            if vpd > 0.5: score += 8
+            elif vpd < -0.5: score -= 5
         
-        # RSI analysis (if available)
-        if 'RSI' in current and not pd.isna(current['RSI']):
-            rsi = current['RSI']
-            if rsi > 80:
-                score += 20  # Very overbought - strong sell signal
-            elif rsi > 70:
-                score += 15  # Overbought - sell signal
-            elif rsi < 20:
-                score -= 20  # Very oversold - strong buy signal
-            elif rsi < 30:
-                score -= 15  # Oversold - buy signal
+        # Chip distribution signals
+        cmf = current.get('CMF_20', 0)
+        if cmf is not None and not np.isnan(cmf):
+            if cmf < -0.1: score += 10
+            elif cmf > 0.1: score -= 8
         
-        # MACD analysis (if available)
-        if 'MACD' in current and not pd.isna(current['MACD']):
-            macd = current['MACD']
-            if macd < 0:
-                score += 10  # Negative MACD - bearish
-            else:
-                score -= 5   # Positive MACD - bullish
-        
-        # Bollinger Band analysis (if available)
-        if 'BB_Position' in current and not pd.isna(current['BB_Position']):
-            bb_pos = current['BB_Position']
-            if bb_pos > 0.8:
-                score += 10  # Near upper band - potential reversal
-            elif bb_pos < 0.2:
-                score -= 10  # Near lower band - potential bounce
-        
-        # Ensure score is within bounds (0-100)
-        score = max(0, min(100, score))
-        
-        return score
+        return max(0, min(100, score))
     
+    def walk_forward_validate_sell(self, buy_price=None, step=10):
+        """
+        Walk-forward backtest of sell signals: at each point check if the
+        sell/hold decision was correct based on the next 10 days' price action.
+        """
+        if self.data is None or len(self.data) < 100:
+            return None
+        try:
+            data = self.data
+            sell_correct, sell_wrong, hold_correct, hold_wrong = 0, 0, 0, 0
+            total = 0
+
+            for i in range(60, len(data) - step, step):
+                current_price = data['close'].iloc[i]
+                future_price = data['close'].iloc[i + step]
+                future_return = (future_price - current_price) / current_price
+
+                sim_buy = buy_price if buy_price else current_price * 0.95
+                sim_return = (current_price - sim_buy) / sim_buy
+
+                current = data.iloc[i]
+
+                # Simplified combined sell score (same logic as the enhanced version)
+                profit_score = 50
+                if sim_return >= 0.08: profit_score = 85
+                elif sim_return >= 0.05: profit_score = 75
+                elif sim_return >= 0.03: profit_score = 60
+                elif sim_return <= -0.05: profit_score = 95
+                elif sim_return <= -0.03: profit_score = 80
+
+                tech_score = 50
+                for col, w in [('Price_Momentum_3', 8), ('Price_Momentum_5', 10), ('Price_Momentum_10', 7)]:
+                    v = current.get(col, 0)
+                    if v is not None and not np.isnan(v):
+                        if v < -0.05: tech_score += w
+                        elif v < -0.02: tech_score += w // 2
+                        elif v > 0.05: tech_score -= w
+                        elif v > 0.02: tech_score -= w // 2
+                rsi = current.get('RSI', 50)
+                if not np.isnan(rsi):
+                    if rsi > 80: tech_score += 15
+                    elif rsi > 70: tech_score += 10
+                    elif rsi < 25: tech_score -= 12
+                cmf = current.get('CMF_20', 0)
+                dist_score = 50
+                if cmf is not None and not np.isnan(cmf):
+                    dist_score = max(0, min(100, 50 - int(cmf * 200)))
+                    if cmf < -0.1: tech_score += 10
+                    elif cmf > 0.1: tech_score -= 8
+
+                combined = int(0.40 * profit_score + 0.30 * 50 + 0.20 * tech_score + 0.10 * dist_score)
+                decision = 'SELL' if combined >= 60 else 'HOLD'
+
+                total += 1
+                if decision == 'SELL':
+                    if future_return < 0: sell_correct += 1
+                    else: sell_wrong += 1
+                else:
+                    if future_return >= 0: hold_correct += 1
+                    else: hold_wrong += 1
+
+            if total == 0:
+                return None
+
+            total_sell = sell_correct + sell_wrong
+            sell_precision = sell_correct / total_sell if total_sell > 0 else 0
+            hold_precision = hold_correct / (hold_correct + hold_wrong) if (hold_correct + hold_wrong) > 0 else 0
+            overall_acc = (sell_correct + hold_correct) / total
+            naive_acc = (hold_correct + sell_wrong) / total
+            edge = overall_acc - naive_acc
+
+            if edge > 0.05 and sell_precision > 0.55:
+                rating = 'GOOD'
+            elif edge > 0 and sell_precision > 0.45:
+                rating = 'MODERATE'
+            elif edge > -0.05:
+                rating = 'WEAK'
+            else:
+                rating = 'POOR'
+
+            return {
+                'sell_wf_total': total,
+                'sell_wf_sell_count': total_sell,
+                'sell_wf_sell_precision': round(sell_precision, 3),
+                'sell_wf_hold_precision': round(hold_precision, 3),
+                'sell_wf_accuracy': round(overall_acc, 3),
+                'sell_wf_baseline': round(naive_acc, 3),
+                'sell_wf_edge': round(edge, 3),
+                'sell_wf_rating': rating,
+            }
+        except Exception as e:
+            print(f"⚠️  Sell walk-forward error: {e}")
+            return None
+
     def generate_chinese_sell_recommendation(self, sell_analysis, current_return, buy_price, market='A'):
         """
         Generate sell recommendation for Chinese stocks with ML integration

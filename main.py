@@ -616,21 +616,26 @@ def main():
                                 print(f"Urgency: {rec['urgency']}")
                                 print(f"Target Price: {rec['target_price']:.2f}")
                                 print(f"Risk Level: {rec['risk_level']}")
-                                print(f"Technical Score: {rec['technical_score']:.1f}/100")
+                                
+                                print(f"\n📊 SCORE BREAKDOWN:")
+                                print(f"   Combined Score: {rec['combined_score']:.0f}/100")
+                                print(f"   Profit Mgmt: {rec.get('profit_score', 50):.0f}/100 (weight 40%)")
+                                print(f"   ML Downside:  {rec.get('ml_score', 50):.0f}/100 (weight 30%)")
+                                print(f"   Technical:    {rec['technical_score']:.0f}/100 (weight 20%)")
+                                print(f"   Distribution: {rec.get('distribution_score', 50):.0f}/100 (weight 10%)")
                                 
                                 if rec.get('ml_available', True) and rec.get('ml_probability') is not None:
-                                    print(f"ML Probability: {rec['ml_probability']:.3f}")
-                                    print(f"ML Prediction: {rec['ml_prediction']}")
-                                    print(f"ML Score: {rec['ml_score']:.2f}/100")
+                                    ml_p = rec['ml_probability']
+                                    if ml_p > 0:
+                                        print(f"\n🤖 ML: {ml_p:.1%} rise probability")
                                 else:
-                                    print(f"ML Analysis: Not available")
+                                    print(f"\n🤖 ML: Not available")
                                 
-                                print(f"Combined Score: {rec['combined_score']:.2f}/100")
                                 print(f"ML Insights: {rec.get('ml_insights', 'Not available')}")
                                 
                                 display_ml_and_confidence_info(rec)
                                 
-                                print(f"Reasoning: {rec['reasoning']}")
+                                print(f"\nReasoning: {rec['reasoning']}")
                                 
                                 if rec['sell_signals']:
                                     print(f"\n📉 SELL SIGNALS:")
@@ -646,6 +651,15 @@ def main():
                                     print(f"\n⚠️  RISK FACTORS:")
                                     for risk in rec['risk_factors']:
                                         print(f"   • {risk}")
+                                
+                                # Walk-forward sell reliability
+                                sell_rating = rec.get('sell_wf_rating')
+                                if sell_rating:
+                                    rating_emoji = {'GOOD': '🟢', 'MODERATE': '🟡', 'WEAK': '🟠', 'POOR': '🔴'}.get(sell_rating, '⚪')
+                                    print(f"\n📉 SELL SIGNAL RELIABILITY: {rating_emoji} {sell_rating}")
+                                    print(f"   Edge vs always-hold: {rec.get('sell_wf_edge', 0):+.1%}")
+                                    print(f"   SELL precision: {rec.get('sell_wf_sell_precision', 0):.0%}")
+                                    print(f"   HOLD precision: {rec.get('sell_wf_hold_precision', 0):.0%}")
                                 
                                 if rec.get('limit_up_near'):
                                     print(f"\n🚨 LIMIT UP NEAR - HIGH RISK OF REVERSAL")
