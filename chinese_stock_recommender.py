@@ -707,7 +707,7 @@ class ChineseStockRecommender:
         final_recommendations.sort(key=lambda x: x['final_score'], reverse=True)
         top_recs = final_recommendations[:top_n]
         
-        # Run walk-forward validation on top picks for reliability assessment
+        # Run walk-forward validation on top picks and adjust scores
         print(f"\n📈 Running walk-forward validation on top {len(top_recs)} picks...")
         for i, rec in enumerate(top_recs, 1):
             print(f"   🔄 Validating {rec['symbol']} ({i}/{len(top_recs)})...")
@@ -720,17 +720,63 @@ class ChineseStockRecommender:
                     if wf_result:
                         for k, v in wf_result.items():
                             rec[k] = v
-                        print(f"      ✅ {rec['symbol']}: edge={wf_result['wf_edge']:+.1%}, "
-                              f"buy_precision={wf_result['wf_buy_precision']:.0%}, "
-                              f"reliability={wf_result['wf_reliability']}")
+                        
+                        # Save the raw (pre-adjustment) score
+                        rec['raw_score'] = rec['final_score']
+                        rec['raw_action'] = rec['action']
+                        
+                        # Adjust final score based on walk-forward reliability
+                        reliability = wf_result['wf_reliability']
+                        edge = wf_result['wf_edge']
+                        precision = wf_result['wf_buy_precision']
+                        
+                        # Multiplier: GOOD=1.0, MODERATE=0.85, WEAK=0.7, POOR=0.55
+                        wf_multiplier = {
+                            'GOOD': 1.0, 'MODERATE': 0.85,
+                            'WEAK': 0.70, 'POOR': 0.55,
+                        }.get(reliability, 0.7)
+                        
+                        # Extra bonus/penalty from edge and precision
+                        edge_adj = max(-10, min(10, edge * 100))
+                        prec_adj = max(-5, min(5, (precision - 0.4) * 25))
+                        
+                        adjusted = rec['final_score'] * wf_multiplier + edge_adj + prec_adj
+                        rec['final_score'] = round(max(0, min(100, adjusted)), 2)
+                        
+                        # Re-derive action from adjusted score + ML probability
+                        ml_p = rec.get('ml_probability', 0.5)
+                        adj_score = rec['final_score']
+                        if adj_score >= 80 and ml_p > 0.7:
+                            rec['action'] = 'STRONG BUY'
+                        elif adj_score >= 70 and ml_p > 0.6:
+                            rec['action'] = 'BUY'
+                        elif adj_score >= 60 and ml_p > 0.5:
+                            rec['action'] = 'HOLD'
+                        else:
+                            rec['action'] = 'HOLD'
+                        
+                        print(f"      ✅ {rec['symbol']}: edge={edge:+.1%}, "
+                              f"precision={precision:.0%}, "
+                              f"reliability={reliability} | "
+                              f"score {rec['raw_score']:.0f} → {rec['final_score']:.0f} "
+                              f"({rec['raw_action']} → {rec['action']})")
                     else:
                         rec['wf_reliability'] = 'N/A'
+                        rec['raw_score'] = rec['final_score']
+                        rec['raw_action'] = rec['action']
                         print(f"      ⚠️  {rec['symbol']}: insufficient data for walk-forward")
                 else:
                     rec['wf_reliability'] = 'N/A'
+                    rec['raw_score'] = rec['final_score']
+                    rec['raw_action'] = rec['action']
             except Exception as e:
                 rec['wf_reliability'] = 'N/A'
+                rec['raw_score'] = rec['final_score']
+                rec['raw_action'] = rec['action']
                 print(f"      ⚠️  {rec['symbol']}: walk-forward failed ({e})")
+        
+        # Re-sort by adjusted score
+        top_recs.sort(key=lambda x: x['final_score'], reverse=True)
         
         return top_recs
     
@@ -750,11 +796,22 @@ class ChineseStockRecommender:
                 stock_display += f" - {rec['stock_name']}"
             
             print(f"\n{i}. {stock_display}")
-            print(f"   📊 Final Score: {rec['final_score']:.2f}/100")
-            print(f"   📈 Technical Score: {rec['technical_score']:.2f}/100")
+            raw_score = rec.get('raw_score', rec['final_score'])
+            raw_action = rec.get('raw_action', rec['action'])
+            adjusted = rec['final_score']
+            changed = abs(raw_score - adjusted) > 0.5
+            
+            if changed:
+                print(f"   📊 Adjusted Score: {adjusted:.1f}/100  (raw: {raw_score:.1f})")
+            else:
+                print(f"   📊 Final Score: {adjusted:.1f}/100")
+            print(f"   📈 Technical Score: {rec['technical_score']:.1f}/100")
             print(f"   🤖 ML Probability: {rec['ml_probability']:.3f}")
             print(f"   🤖 ML Prediction: {rec['ml_prediction']}")
-            print(f"   💡 Action: {rec['action']}")
+            if changed and raw_action != rec['action']:
+                print(f"   💡 Action: {rec['action']}  (was {raw_action} before walk-forward)")
+            else:
+                print(f"   💡 Action: {rec['action']}")
             print(f"   💰 Current Price: ¥{rec['current_price']:.2f}")
             
             # Show price estimates and confidence if available
