@@ -546,9 +546,9 @@ def main():
                                     for risk in rec['risk_factors']:
                                         print(f"   • {risk}")
                                 
-                                if rec['limit_up_near']:
+                                if rec.get('limit_up_near'):
                                     print(f"\n🚨 LIMIT UP NEAR - HIGH RISK OF REVERSAL")
-                                elif rec['limit_down_near']:
+                                elif rec.get('limit_down_near'):
                                     print(f"\n📈 LIMIT DOWN NEAR - POTENTIAL BOUNCE")
                                 
                                 if rec['action'] == "SELL NOW":
@@ -558,15 +558,14 @@ def main():
                                 else:
                                     print(f"\n✅ HOLDING RECOMMENDED: {rec['action']}")
                             else:
-                                # Concise output
                                 print(f"💰 Buy: {result['buy_price']:.2f} | Current: {result['current_price']:.2f} | Return: {result['current_return']:.1%}")
                                 print(f"💡 Action: {rec['action']} | Urgency: {rec['urgency']}")
                                 print(f"🎯 Target: {rec['target_price']:.2f} | Risk: {rec['risk_level']}")
                                 print(f"📊 Technical Score: {rec['technical_score']:.2f}/100")
                                 
-                                # Show ML info in concise mode
-                                if rec['ml_probability'] is not None:
-                                    print(f"🤖 ML: {rec['ml_probability']:.1%} probability {'RISE' if rec['ml_prediction'] == 1 else 'DECLINE'}")
+                                ml_p = rec.get('ml_probability')
+                                if ml_p is not None and ml_p > 0:
+                                    print(f"🤖 ML: {ml_p:.1%} probability {'RISE' if rec.get('ml_prediction') == 1 else 'DECLINE'}")
                                 else:
                                     print(f"🤖 ML: Not available")
                                 
@@ -618,13 +617,17 @@ def main():
                                 print(f"Target Price: {rec['target_price']:.2f}")
                                 print(f"Risk Level: {rec['risk_level']}")
                                 print(f"Technical Score: {rec['technical_score']:.1f}/100")
-                                print(f"ML Probability: {rec['ml_probability']:.3f}")
-                                print(f"ML Prediction: {rec['ml_prediction']}")
-                                print(f"ML Score: {rec['ml_score']:.2f}/100")
+                                
+                                if rec.get('ml_available', True) and rec.get('ml_probability') is not None:
+                                    print(f"ML Probability: {rec['ml_probability']:.3f}")
+                                    print(f"ML Prediction: {rec['ml_prediction']}")
+                                    print(f"ML Score: {rec['ml_score']:.2f}/100")
+                                else:
+                                    print(f"ML Analysis: Not available")
+                                
                                 print(f"Combined Score: {rec['combined_score']:.2f}/100")
                                 print(f"ML Insights: {rec.get('ml_insights', 'Not available')}")
                                 
-                                # Use reusable function to display ML and confidence info
                                 display_ml_and_confidence_info(rec)
                                 
                                 print(f"Reasoning: {rec['reasoning']}")
@@ -644,9 +647,9 @@ def main():
                                     for risk in rec['risk_factors']:
                                         print(f"   • {risk}")
                                 
-                                if rec['limit_up_near']:
+                                if rec.get('limit_up_near'):
                                     print(f"\n🚨 LIMIT UP NEAR - HIGH RISK OF REVERSAL")
-                                elif rec['limit_down_near']:
+                                elif rec.get('limit_down_near'):
                                     print(f"\n📈 LIMIT DOWN NEAR - POTENTIAL BOUNCE")
                                 
                                 if rec['action'] == "SELL NOW":
@@ -656,13 +659,11 @@ def main():
                                 else:
                                     print(f"\n✅ HOLDING RECOMMENDED: {rec['action']}")
                             else:
-                                # Concise output
                                 print(f"💰 Buy: {result['buy_price']:.2f} | Current: {result['current_price']:.2f} | Return: {result['current_return']:.1%}")
                                 print(f"💡 Action: {rec['action']} | Urgency: {rec['urgency']}")
                                 print(f"🎯 Target: {rec['target_price']:.2f} | Risk: {rec['risk_level']}")
                                 print(f"📊 Technical Score: {rec['technical_score']:.2f}/100")
                                 
-                                # Quick action summary
                                 if rec['action'] == "SELL NOW":
                                     print(f"🚨 IMMEDIATE ACTION REQUIRED")
                                 elif rec['action'] == "SELL SOON":

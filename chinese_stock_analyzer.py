@@ -1604,15 +1604,21 @@ class ChineseStockAnalyzer:
         else:
             ml_insights = "ML prediction not available"
         
+        # Ensure ml fields are never None (safe defaults for display)
+        safe_ml_prob = ml_probability if ml_probability is not None else 0.0
+        safe_ml_pred = sell_analysis['ml_prediction'] if sell_analysis['ml_prediction'] is not None else 0
+        safe_ml_score = ml_score if ml_score is not None else 0
+        
         return {
             'action': action,
             'urgency': urgency,
             'reasoning': reasoning,
             'technical_score': tech_score,
-            'ml_score': ml_score,
+            'ml_score': safe_ml_score,
             'combined_score': combined_score,
-            'ml_probability': ml_probability,
-            'ml_prediction': sell_analysis['ml_prediction'],
+            'ml_probability': safe_ml_prob,
+            'ml_prediction': safe_ml_pred,
+            'ml_available': ml_probability is not None,
             'score_interpretation': score_interpretation,
             'ml_insights': ml_insights,
             'target_price': target_price,
