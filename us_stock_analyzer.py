@@ -7,8 +7,12 @@ from ta.trend import MACD, SMAIndicator, EMAIndicator, ADXIndicator
 from ta.momentum import RSIIndicator, StochasticOscillator, WilliamsRIndicator, ROCIndicator
 from ta.volatility import BollingerBands, AverageTrueRange
 from ta.volume import OnBalanceVolumeIndicator, AccDistIndexIndicator
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import RobustScaler
+from sklearn.model_selection import cross_val_score, TimeSeriesSplit
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.pipeline import Pipeline
 import warnings
 import pickle
 import os
@@ -21,7 +25,7 @@ class EnhancedStockAnalyzer:
         self.symbol = None
         self.backtest_results = None
         self.model = None
-        self.scaler = StandardScaler()
+        self.scaler = RobustScaler()
         self.model_history = []
         self.model_performance = []
         self.last_update_date = None
@@ -30,7 +34,6 @@ class EnhancedStockAnalyzer:
         self.model_dir = "us_models"
         self.model_info = {}
         
-        # Create model directory if it doesn't exist
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
     
@@ -139,7 +142,7 @@ class EnhancedStockAnalyzer:
     
     def train_initial_model(self):
         """
-        Train the initial model on historical data
+        Train the initial ensemble model on historical data
         """
         try:
             X, y = self.prepare_ml_data(holding_period=10, profit_threshold=0.03)
@@ -148,44 +151,37 @@ class EnhancedStockAnalyzer:
                 print("Insufficient data for initial model training")
                 return False
             
-            # Split data (80% train, 20% test)
             split_idx = int(len(X) * 0.8)
             X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            # Scale features
-            X_train_scaled = self.scaler.fit_transform(X_train)
-            X_test_scaled = self.scaler.transform(X_test)
+            n_features = min(len(X.columns), 20)
+            self.model = self.create_advanced_pipeline(n_features)
+            self.model.fit(X_train, y_train)
             
-            # Train Random Forest
-            self.model = RandomForestClassifier(
-                n_estimators=100, 
-                random_state=42, 
-                max_depth=10,
-                min_samples_split=10,
-                min_samples_leaf=5
-            )
-            self.model.fit(X_train_scaled, y_train)
+            train_score = self.model.score(X_train, y_train)
+            test_score = self.model.score(X_test, y_test)
             
-            # Evaluate model
-            train_score = self.model.score(X_train_scaled, y_train)
-            test_score = self.model.score(X_test_scaled, y_test)
+            tscv = TimeSeriesSplit(n_splits=5)
+            cv_scores = cross_val_score(self.model, X_train, y_train, cv=tscv, scoring='accuracy')
+            cv_mean = cv_scores.mean()
             
-            # Store model performance
             self.model_performance.append({
                 'version': self.model_version,
                 'train_score': train_score,
                 'test_score': test_score,
+                'cv_mean': cv_mean,
                 'data_points': len(X),
                 'date': self.data.index[-1].date()
             })
             
-            print(f"Initial Model Performance:")
+            print(f"Initial Ensemble Model Performance:")
             print(f"Training Accuracy: {train_score:.3f}")
             print(f"Test Accuracy: {test_score:.3f}")
+            print(f"Cross-Validation: {cv_mean:.3f}")
             print(f"Data Points Used: {len(X)}")
             
-            return test_score > 0.6
+            return test_score > 0.55 and cv_mean > 0.50
             
         except Exception as e:
             print(f"Error in initial model training: {str(e)}")
@@ -261,32 +257,26 @@ class EnhancedStockAnalyzer:
     
     def update_model_weights(self):
         """
-        Update model weights with new data
+        Retrain ensemble model with updated data
         """
         try:
             X, y = self.prepare_ml_data(holding_period=10, profit_threshold=0.03)
             
-            if len(X) < 150:  # Need more data for update
+            if len(X) < 150:
                 print("Insufficient data for model update")
                 return False
             
-            # Split data (85% train, 15% test for updates)
             split_idx = int(len(X) * 0.85)
             X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            # Scale features
-            X_train_scaled = self.scaler.fit_transform(X_train)
-            X_test_scaled = self.scaler.transform(X_test)
+            n_features = min(len(X.columns), 20)
+            self.model = self.create_advanced_pipeline(n_features)
+            self.model.fit(X_train, y_train)
             
-            # Retrain model with updated data
-            self.model.fit(X_train_scaled, y_train)
+            train_score = self.model.score(X_train, y_train)
+            test_score = self.model.score(X_test, y_test)
             
-            # Evaluate updated model
-            train_score = self.model.score(X_train_scaled, y_train)
-            test_score = self.model.score(X_test_scaled, y_test)
-            
-            # Store model performance
             self.model_performance.append({
                 'version': self.model_version + 1,
                 'train_score': train_score,
@@ -300,7 +290,6 @@ class EnhancedStockAnalyzer:
             print(f"Test Accuracy: {test_score:.3f}")
             print(f"Total Data Points: {len(X)}")
             
-            # Check if model improved
             if len(self.model_performance) > 1:
                 prev_score = self.model_performance[-2]['test_score']
                 improvement = test_score - prev_score
@@ -313,7 +302,7 @@ class EnhancedStockAnalyzer:
                 else:
                     print("➡️  Model accuracy stable")
             
-            return test_score > 0.6
+            return test_score > 0.55
             
         except Exception as e:
             print(f"Error in model update: {str(e)}")
@@ -351,19 +340,15 @@ class EnhancedStockAnalyzer:
     
     def predict_with_dynamic_model(self, features):
         """
-        Make prediction using the dynamic model
+        Make prediction using the dynamic model (pipeline handles scaling internally)
         """
         if self.model is None:
             return None, "Model not available"
         
         try:
-            # Scale features
-            features_scaled = self.scaler.transform(features.reshape(1, -1))
-            
-            # Get prediction and probability
-            prediction = self.model.predict(features_scaled)[0]
-            probability = self.model.predict_proba(features_scaled)[0][1]
-            
+            input_data = features.reshape(1, -1) if features.ndim == 1 else features
+            prediction = self.model.predict(input_data)[0]
+            probability = self.model.predict_proba(input_data)[0][1]
             return prediction, probability
             
         except Exception as e:
@@ -557,51 +542,125 @@ class EnhancedStockAnalyzer:
         self.data['Price_vs_SMA20'] = (self.data['Close'] - self.data['SMA_20']) / self.data['SMA_20']
         self.data['Price_vs_SMA50'] = (self.data['Close'] - self.data['SMA_50']) / self.data['SMA_50']
         
+        # --- Additional normalized features for improved ML ---
+        # SMA crossover ratios (relative, not absolute)
+        self.data['SMA_20_vs_50'] = (self.data['SMA_20'] - self.data['SMA_50']) / self.data['SMA_50']
+        self.data['SMA_10_vs_20'] = (self.data['SMA_10'] - self.data['SMA_20']) / self.data['SMA_20']
+        self.data['SMA_5_vs_10'] = (self.data['SMA_5'] - self.data['SMA_10']) / self.data['SMA_10']
+        self.data['EMA_10_vs_20'] = (self.data['EMA_10'] - self.data['EMA_20']) / self.data['EMA_20']
+        self.data['Price_vs_SMA5'] = (self.data['Close'] - self.data['SMA_5']) / self.data['SMA_5']
+        self.data['Price_vs_SMA10'] = (self.data['Close'] - self.data['SMA_10']) / self.data['SMA_10']
+        self.data['Price_vs_SMA100'] = (self.data['Close'] - self.data['SMA_100']) / self.data['SMA_100']
+        self.data['Price_vs_SMA200'] = (self.data['Close'] - self.data['SMA_200']) / self.data['SMA_200']
+        
+        # Normalized MACD (relative to price)
+        self.data['MACD_Norm'] = self.data['MACD'] / self.data['Close']
+        self.data['MACD_Signal_Norm'] = self.data['MACD_Signal'] / self.data['Close']
+        self.data['MACD_Hist_Norm'] = self.data['MACD_Histogram'] / self.data['Close']
+        
+        # OBV rate of change (instead of absolute OBV)
+        self.data['OBV_ROC_5'] = self.data['OBV'].pct_change(periods=5)
+        self.data['OBV_ROC_10'] = self.data['OBV'].pct_change(periods=10)
+        
+        # RSI slope (direction of RSI movement)
+        self.data['RSI_14_Slope'] = self.data['RSI_14'] - self.data['RSI_14'].shift(3)
+        self.data['RSI_7_Slope'] = self.data['RSI_7'] - self.data['RSI_7'].shift(3)
+        
+        # Volume-price divergence (price up but volume down, or vice versa)
+        self.data['Vol_Price_Divergence'] = (
+            self.data['Close'].pct_change(5).fillna(0) * -1 +
+            self.data['Volume'].pct_change(5).fillna(0)
+        )
+        
+        # Price acceleration (rate of change of momentum)
+        self.data['Price_Acceleration'] = self.data['Momentum_5'] - self.data['Momentum_5'].shift(5)
+        
+        # Candle body ratio (normalized)
+        self.data['Body_Ratio'] = (self.data['Close'] - self.data['Open']) / self.data['Price_Range'].replace(0, np.nan)
+        
+        # High-low range relative to ATR
+        self.data['Range_vs_ATR'] = self.data['Price_Range'] / self.data['ATR'].replace(0, np.nan)
+        
         print("Advanced technical indicators calculated successfully!")
     
     def create_features(self):
         """
-        Create comprehensive feature set for ML model
+        Create feature set using only normalized/relative features.
+        Absolute price-dependent features (raw SMA, EMA, BB levels, OBV, ADI, ATR)
+        are excluded to prevent feature leakage and improve generalization.
         """
         features = []
         
-        # Price-based features
-        price_features = ['Returns', 'Log_Returns', 'Price_Range_Ratio', 'Price_vs_SMA20', 'Price_vs_SMA50']
+        # Price-based relative features
+        price_features = [
+            'Returns', 'Log_Returns', 'Price_Range_Ratio',
+            'Price_vs_SMA5', 'Price_vs_SMA10', 'Price_vs_SMA20', 'Price_vs_SMA50',
+            'Price_vs_SMA100', 'Price_vs_SMA200',
+            'Body_Ratio',
+        ]
         features.extend(price_features)
         
-        # Moving average features
-        ma_features = [col for col in self.data.columns if 'SMA_' in col or 'EMA_' in col]
-        features.extend(ma_features)
+        # SMA/EMA crossover ratios (relative, not absolute levels)
+        ma_ratio_features = [
+            'SMA_5_vs_10', 'SMA_10_vs_20', 'SMA_20_vs_50', 'EMA_10_vs_20',
+        ]
+        features.extend(ma_ratio_features)
         
-        # MACD features
-        macd_features = ['MACD', 'MACD_Signal', 'MACD_Histogram', 'MACD_Zero_Cross', 'MACD_Signal_Cross']
+        # Normalized MACD + signal features
+        macd_features = [
+            'MACD_Norm', 'MACD_Signal_Norm', 'MACD_Hist_Norm',
+            'MACD_Zero_Cross', 'MACD_Signal_Cross',
+        ]
         features.extend(macd_features)
         
-        # RSI features
-        rsi_features = [col for col in self.data.columns if 'RSI_' in col]
+        # RSI features (already normalized 0-100) + slopes
+        rsi_features = ['RSI_7', 'RSI_14', 'RSI_21', 'RSI_14_Slope', 'RSI_7_Slope']
         features.extend(rsi_features)
         
-        # Bollinger Bands features
-        bb_features = [col for col in self.data.columns if 'BB_' in col]
+        # Bollinger Bands: only relative features (Width and Position)
+        bb_features = [col for col in self.data.columns
+                       if ('BB_Width_' in col or 'BB_Position_' in col)]
         features.extend(bb_features)
         
-        # Volume features
-        volume_features = ['Volume_Ratio', 'OBV', 'ADI']
+        # Volume features (only ratios, not absolute OBV/ADI)
+        volume_features = ['Volume_Ratio', 'OBV_ROC_5', 'OBV_ROC_10', 'Vol_Price_Divergence']
         features.extend(volume_features)
         
-        # Momentum features
-        momentum_features = ['Williams_R', 'ROC', 'Stoch_K', 'Stoch_D', 'Stoch_Overbought', 'Stoch_Oversold']
+        # Momentum features (already normalized or bounded)
+        momentum_features = [
+            'Williams_R', 'ROC', 'Stoch_K', 'Stoch_D',
+            'Stoch_Overbought', 'Stoch_Oversold',
+            'Price_Acceleration',
+        ]
         features.extend(momentum_features)
         
-        # Volatility features
-        volatility_features = ['ATR', 'ATR_Ratio'] + [col for col in self.data.columns if 'Volatility_' in col]
+        # Volatility features (only ratios, not absolute ATR)
+        volatility_features = ['ATR_Ratio', 'Range_vs_ATR'] + [
+            col for col in self.data.columns if 'Volatility_' in col
+        ]
         features.extend(volatility_features)
         
-        # Trend features
+        # Trend features (ADX/DI are already normalized)
         trend_features = ['ADX', 'DI_Plus', 'DI_Minus', 'Trend_Strength']
         features.extend(trend_features)
         
-        return features
+        # Multi-period momentum (already relative)
+        momentum_period_features = [col for col in self.data.columns
+                                    if col.startswith('Momentum_')]
+        features.extend(momentum_period_features)
+        
+        # Gap features
+        features.extend(['Gap_Up', 'Gap_Down'])
+        
+        # Deduplicate while preserving order
+        seen = set()
+        unique_features = []
+        for f in features:
+            if f not in seen and f in self.data.columns:
+                seen.add(f)
+                unique_features.append(f)
+        
+        return unique_features
     
     def create_target_variable(self, holding_period=10, profit_threshold=0.03):
         """
@@ -626,9 +685,59 @@ class EnhancedStockAnalyzer:
         
         return X, y
     
+    def create_advanced_pipeline(self, n_features=None):
+        """
+        Build an ensemble pipeline: RobustScaler -> SelectKBest -> VotingClassifier.
+        The ensemble uses RF + GradientBoosting + LogisticRegression with soft voting.
+        """
+        k = min(n_features or 20, 20)
+        feature_selector = SelectKBest(score_func=f_classif, k=k)
+        
+        rf = RandomForestClassifier(
+            n_estimators=200,
+            max_depth=5,
+            min_samples_split=25,
+            min_samples_leaf=12,
+            max_features='sqrt',
+            class_weight='balanced',
+            random_state=42,
+            n_jobs=-1,
+        )
+        gb = GradientBoostingClassifier(
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=3,
+            min_samples_split=30,
+            min_samples_leaf=15,
+            subsample=0.8,
+            random_state=42,
+        )
+        lr = LogisticRegression(
+            C=0.5,
+            penalty='l2',
+            solver='liblinear',
+            class_weight='balanced',
+            random_state=42,
+            max_iter=1000,
+        )
+        
+        ensemble = VotingClassifier(
+            estimators=[('rf', rf), ('gb', gb), ('lr', lr)],
+            voting='soft',
+            weights=[0.45, 0.35, 0.20],
+        )
+        
+        pipeline = Pipeline([
+            ('scaler', RobustScaler()),
+            ('feature_selector', feature_selector),
+            ('ensemble', ensemble),
+        ])
+        return pipeline
+    
     def train_ml_model(self, holding_period=10, profit_threshold=0.03):
         """
-        Train machine learning model for prediction
+        Train an ensemble ML model with cross-validation and class balancing.
+        Uses time-series-aware splitting to avoid look-ahead bias.
         """
         X, y = self.prepare_ml_data(holding_period, profit_threshold)
         
@@ -636,39 +745,56 @@ class EnhancedStockAnalyzer:
             print("Insufficient data for ML model training")
             return False
         
-        # Split data (80% train, 20% test)
+        class_counts = y.value_counts()
+        print(f"📊 Class Balance: {class_counts.to_dict()}")
+        print(f"📊 Positive Class Ratio: {class_counts.get(1, 0) / len(y):.3f}")
+        
+        # Time-series split (no random shuffle)
         split_idx = int(len(X) * 0.8)
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
         
-        # Scale features
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_test_scaled = self.scaler.transform(X_test)
+        n_features = min(len(X.columns), 20)
+        self.model = self.create_advanced_pipeline(n_features)
+        self.model.fit(X_train, y_train)
         
-        # Train Random Forest
-        self.model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
-        self.model.fit(X_train_scaled, y_train)
+        train_score = self.model.score(X_train, y_train)
+        test_score = self.model.score(X_test, y_test)
         
-        # Evaluate model
-        train_score = self.model.score(X_train_scaled, y_train)
-        test_score = self.model.score(X_test_scaled, y_test)
+        # Time-series cross-validation on training set
+        tscv = TimeSeriesSplit(n_splits=5)
+        cv_scores = cross_val_score(self.model, X_train, y_train, cv=tscv, scoring='accuracy')
+        cv_mean = cv_scores.mean()
+        cv_std = cv_scores.std()
         
-        # Store model information
+        train_pred = self.model.predict(X_train)
+        test_pred = self.model.predict(X_test)
+        print(f"📊 Training Predictions: {np.bincount(train_pred)}")
+        print(f"📊 Test Predictions: {np.bincount(test_pred)}")
+        print(f"📊 Cross-Validation: {cv_mean:.3f} (+/- {cv_std*2:.3f})")
+        
         self.model_info = {
             'train_score': train_score,
             'test_score': test_score,
+            'cv_mean': cv_mean,
+            'cv_std': cv_std,
             'features_count': len(X.columns),
             'data_points': len(X),
             'last_trained': datetime.now().isoformat(),
             'holding_period': holding_period,
-            'profit_threshold': profit_threshold
+            'profit_threshold': profit_threshold,
+            'class_balance': class_counts.to_dict(),
+            'model_type': 'Ensemble (RF + GB + LR) with Feature Selection',
         }
         
-        print(f"ML Model Training Results:")
+        print(f"🚀 Ensemble ML Model Training Results:")
         print(f"Training Accuracy: {train_score:.3f}")
         print(f"Test Accuracy: {test_score:.3f}")
+        print(f"Cross-Validation: {cv_mean:.3f} (+/- {cv_std*2:.3f})")
+        print(f"Features Used: {len(X.columns)}")
+        print(f"Model Type: Ensemble (RF + GB + LR)")
         
-        return test_score > 0.6  # Return True if model is reasonably accurate
+        return test_score > 0.55 and cv_mean > 0.50
     
     def calculate_technical_score(self, index):
         """
@@ -759,12 +885,12 @@ class EnhancedStockAnalyzer:
             
             if len(current_features) == 0:
                 continue
-                
-            # Scale features
-            current_features_scaled = self.scaler.transform(current_features)
             
-            # Get ML prediction
-            ml_prediction = self.model.predict_proba(current_features_scaled)[0][1] if self.model else 0.5
+            # Pipeline includes scaler + feature_selector internally
+            try:
+                ml_prediction = self.model.predict_proba(current_features)[0][1] if self.model else 0.5
+            except Exception:
+                ml_prediction = 0.5
             
             # Calculate technical score
             tech_score = self.calculate_technical_score(i)
@@ -1198,14 +1324,16 @@ class EnhancedStockAnalyzer:
             
             if len(X) > 0:
                 current_features = X.iloc[-1:].values
-                current_features_scaled = self.scaler.transform(current_features)
-                ml_prediction = self.model.predict_proba(current_features_scaled)[0][1]
-                analysis['ml_score'] = ml_prediction
-                
-                if ml_prediction < 0.3:
-                    analysis['sell_signals'].append("ML model predicts low profit probability")
-                elif ml_prediction > 0.7:
-                    analysis['hold_signals'].append("ML model predicts high profit probability")
+                try:
+                    ml_prediction = self.model.predict_proba(current_features)[0][1]
+                    analysis['ml_score'] = ml_prediction
+                    
+                    if ml_prediction < 0.3:
+                        analysis['sell_signals'].append("ML model predicts low profit probability")
+                    elif ml_prediction > 0.7:
+                        analysis['hold_signals'].append("ML model predicts high profit probability")
+                except Exception:
+                    pass
         
         # Current return analysis
         current_return = (current['Close'] - buy_price) / buy_price
@@ -1373,6 +1501,20 @@ class EnhancedStockAnalyzer:
         elif len(sell_analysis['risk_factors']) > 2:
             risk_level = "MEDIUM"
         
+        # ML prediction info for display
+        ml_probability = None
+        ml_prediction = None
+        if self.model:
+            features = self.create_features()
+            X = self.data[features].dropna()
+            if len(X) > 0:
+                try:
+                    current_features = X.iloc[-1:].values
+                    ml_probability = self.model.predict_proba(current_features)[0][1]
+                    ml_prediction = 1 if ml_probability > 0.5 else 0
+                except Exception:
+                    pass
+        
         return {
             'action': action,
             'urgency': urgency,
@@ -1380,10 +1522,14 @@ class EnhancedStockAnalyzer:
             'combined_score': combined_score,
             'technical_score': tech_score,
             'ml_score': ml_score,
+            'ml_probability': ml_probability,
+            'ml_prediction': ml_prediction,
             'target_price': target_price,
             'risk_level': risk_level,
             'sell_signals': sell_analysis['sell_signals'],
             'hold_signals': sell_analysis['hold_signals'],
             'risk_factors': sell_analysis['risk_factors'],
-            'profit_potential': sell_analysis['profit_potential']
+            'profit_potential': sell_analysis['profit_potential'],
+            'limit_up_near': False,
+            'limit_down_near': False,
         } 

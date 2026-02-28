@@ -1,8 +1,12 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import RobustScaler
+from sklearn.model_selection import cross_val_score, TimeSeriesSplit
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.pipeline import Pipeline
 import warnings
 warnings.filterwarnings('ignore')
 import os
@@ -14,7 +18,7 @@ class DynamicModelAnalyzer:
         self.data = None
         self.symbol = None
         self.model = None
-        self.scaler = StandardScaler()
+        self.scaler = RobustScaler()
         self.model_version = 0
         self.last_update_date = None
         self.initial_training_complete = False
@@ -105,7 +109,7 @@ class DynamicModelAnalyzer:
     
     def calculate_indicators(self):
         """
-        Calculate technical indicators
+        Calculate comprehensive technical indicators for the dynamic model
         """
         if self.data is None:
             return
@@ -116,25 +120,92 @@ class DynamicModelAnalyzer:
         self.data['Volume_Ratio'] = self.data['Volume'] / self.data['Volume_MA_20']
         
         # Moving averages
+        self.data['SMA_5'] = self.data['Close'].rolling(window=5).mean()
+        self.data['SMA_10'] = self.data['Close'].rolling(window=10).mean()
         self.data['SMA_20'] = self.data['Close'].rolling(window=20).mean()
         self.data['SMA_50'] = self.data['Close'].rolling(window=50).mean()
         
+        # Price vs MA (relative features)
+        self.data['Price_vs_SMA20'] = (self.data['Close'] - self.data['SMA_20']) / self.data['SMA_20']
+        self.data['Price_vs_SMA50'] = (self.data['Close'] - self.data['SMA_50']) / self.data['SMA_50']
+        self.data['SMA_20_vs_50'] = (self.data['SMA_20'] - self.data['SMA_50']) / self.data['SMA_50']
+        
         # Momentum
+        self.data['Price_Momentum_3'] = self.data['Close'] / self.data['Close'].shift(3) - 1
         self.data['Price_Momentum_5'] = self.data['Close'] / self.data['Close'].shift(5) - 1
         self.data['Price_Momentum_10'] = self.data['Close'] / self.data['Close'].shift(10) - 1
+        self.data['Price_Momentum_20'] = self.data['Close'] / self.data['Close'].shift(20) - 1
+        self.data['Price_Acceleration'] = self.data['Price_Momentum_5'] - self.data['Price_Momentum_5'].shift(5)
         
         # Volatility
+        self.data['Volatility_10'] = self.data['Returns'].rolling(window=10).std()
         self.data['Volatility_20'] = self.data['Returns'].rolling(window=20).std()
+        
+        # RSI
+        delta = self.data['Close'].diff()
+        gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        self.data['RSI'] = 100 - (100 / (1 + rs))
+        self.data['RSI_Slope'] = self.data['RSI'] - self.data['RSI'].shift(3)
+        
+        # MACD (normalized)
+        ema_12 = self.data['Close'].ewm(span=12).mean()
+        ema_26 = self.data['Close'].ewm(span=26).mean()
+        macd = ema_12 - ema_26
+        macd_signal = macd.ewm(span=9).mean()
+        self.data['MACD_Norm'] = macd / self.data['Close']
+        self.data['MACD_Hist_Norm'] = (macd - macd_signal) / self.data['Close']
+        
+        # Bollinger Band position
+        bb_mid = self.data['SMA_20']
+        bb_std = self.data['Close'].rolling(window=20).std()
+        bb_upper = bb_mid + 2 * bb_std
+        bb_lower = bb_mid - 2 * bb_std
+        self.data['BB_Position'] = (self.data['Close'] - bb_lower) / (bb_upper - bb_lower)
+        
+        # ATR ratio
+        high_low = self.data['High'] - self.data['Low']
+        high_close = abs(self.data['High'] - self.data['Close'].shift(1))
+        low_close = abs(self.data['Low'] - self.data['Close'].shift(1))
+        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        self.data['ATR_Ratio'] = true_range.rolling(window=14).mean() / self.data['Close']
+        
+        # Stochastic
+        low_14 = self.data['Low'].rolling(window=14).min()
+        high_14 = self.data['High'].rolling(window=14).max()
+        self.data['Stoch_K'] = ((self.data['Close'] - low_14) / (high_14 - low_14)) * 100
+        self.data['Stoch_D'] = self.data['Stoch_K'].rolling(window=3).mean()
+        
+        # OBV rate of change
+        obv = (np.sign(self.data['Close'].diff()) * self.data['Volume']).fillna(0).cumsum()
+        self.data['OBV_ROC_5'] = obv.pct_change(periods=5)
+        
+        # Volume-price divergence
+        self.data['Vol_Price_Divergence'] = (
+            self.data['Close'].pct_change(5).fillna(0) * -1 +
+            self.data['Volume'].pct_change(5).fillna(0)
+        )
         
         print("Technical indicators calculated successfully!")
     
     def create_features(self):
         """
-        Create feature set for ML model
+        Create expanded feature set using only normalized/relative features
         """
-        features = ['Returns', 'Price_Momentum_5', 'Price_Momentum_10', 
-                   'SMA_20', 'SMA_50', 'Volume_Ratio', 'Volatility_20']
-        return features
+        features = [
+            'Returns', 'Price_Momentum_3', 'Price_Momentum_5',
+            'Price_Momentum_10', 'Price_Momentum_20', 'Price_Acceleration',
+            'Price_vs_SMA20', 'Price_vs_SMA50', 'SMA_20_vs_50',
+            'Volume_Ratio', 'OBV_ROC_5', 'Vol_Price_Divergence',
+            'Volatility_10', 'Volatility_20', 'ATR_Ratio',
+            'RSI', 'RSI_Slope',
+            'MACD_Norm', 'MACD_Hist_Norm',
+            'BB_Position',
+            'Stoch_K', 'Stoch_D',
+        ]
+        available = [f for f in features if f in self.data.columns]
+        return available
     
     def create_target_variable(self, holding_period=10, profit_threshold=0.03):
         """
@@ -159,9 +230,57 @@ class DynamicModelAnalyzer:
         
         return X, y
     
+    def create_advanced_pipeline(self, n_features=None):
+        """
+        Build an ensemble pipeline for the dynamic model
+        """
+        k = min(n_features or 15, 15)
+        feature_selector = SelectKBest(score_func=f_classif, k=k)
+        
+        rf = RandomForestClassifier(
+            n_estimators=200,
+            max_depth=5,
+            min_samples_split=25,
+            min_samples_leaf=12,
+            max_features='sqrt',
+            class_weight='balanced',
+            random_state=42,
+            n_jobs=-1,
+        )
+        gb = GradientBoostingClassifier(
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=3,
+            min_samples_split=30,
+            min_samples_leaf=15,
+            subsample=0.8,
+            random_state=42,
+        )
+        lr = LogisticRegression(
+            C=0.5,
+            penalty='l2',
+            solver='liblinear',
+            class_weight='balanced',
+            random_state=42,
+            max_iter=1000,
+        )
+        
+        ensemble = VotingClassifier(
+            estimators=[('rf', rf), ('gb', gb), ('lr', lr)],
+            voting='soft',
+            weights=[0.45, 0.35, 0.20],
+        )
+        
+        pipeline = Pipeline([
+            ('scaler', RobustScaler()),
+            ('feature_selector', feature_selector),
+            ('ensemble', ensemble),
+        ])
+        return pipeline
+    
     def train_initial_model(self):
         """
-        Train the initial model on historical data
+        Train the initial ensemble model on historical data
         """
         try:
             X, y = self.prepare_ml_data(holding_period=10, profit_threshold=0.03)
@@ -170,38 +289,38 @@ class DynamicModelAnalyzer:
                 print("Insufficient data for initial model training")
                 return False
             
-            # Split data (80% train, 20% test)
             split_idx = int(len(X) * 0.8)
             X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            # Scale features
-            X_train_scaled = self.scaler.fit_transform(X_train)
-            X_test_scaled = self.scaler.transform(X_test)
+            n_features = min(len(X.columns), 15)
+            self.model = self.create_advanced_pipeline(n_features)
+            self.model.fit(X_train, y_train)
             
-            # Train Random Forest
-            self.model = RandomForestClassifier(n_estimators=100, random_state=42)
-            self.model.fit(X_train_scaled, y_train)
+            train_score = self.model.score(X_train, y_train)
+            test_score = self.model.score(X_test, y_test)
             
-            # Evaluate model
-            train_score = self.model.score(X_train_scaled, y_train)
-            test_score = self.model.score(X_test_scaled, y_test)
+            tscv = TimeSeriesSplit(n_splits=5)
+            cv_scores = cross_val_score(self.model, X_train, y_train, cv=tscv, scoring='accuracy')
+            cv_mean = cv_scores.mean()
             
-            # Store performance
             self.model_performance.append({
                 'version': self.model_version,
                 'train_score': train_score,
                 'test_score': test_score,
+                'cv_mean': cv_mean,
                 'data_points': len(X),
                 'date': self.data.index[-1].date()
             })
             
-            print(f"Initial Model Performance:")
+            print(f"Initial Ensemble Model Performance:")
             print(f"Training Accuracy: {train_score:.3f}")
             print(f"Test Accuracy: {test_score:.3f}")
+            print(f"Cross-Validation: {cv_mean:.3f}")
+            print(f"Features Used: {len(X.columns)}")
             print(f"Data Points Used: {len(X)}")
             
-            return test_score > 0.55  # Lower threshold for Chinese stocks
+            return test_score > 0.55
             
         except Exception as e:
             print(f"Error in initial model training: {str(e)}")
@@ -274,7 +393,7 @@ class DynamicModelAnalyzer:
     
     def update_model_weights(self):
         """
-        Update model weights with new data
+        Retrain ensemble model with updated data
         """
         try:
             X, y = self.prepare_ml_data(holding_period=10, profit_threshold=0.03)
@@ -283,23 +402,17 @@ class DynamicModelAnalyzer:
                 print("Insufficient data for model update")
                 return False
             
-            # Split data (85% train, 15% test for updates)
             split_idx = int(len(X) * 0.85)
             X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            # Scale features
-            X_train_scaled = self.scaler.fit_transform(X_train)
-            X_test_scaled = self.scaler.transform(X_test)
+            n_features = min(len(X.columns), 15)
+            self.model = self.create_advanced_pipeline(n_features)
+            self.model.fit(X_train, y_train)
             
-            # Retrain model
-            self.model.fit(X_train_scaled, y_train)
+            train_score = self.model.score(X_train, y_train)
+            test_score = self.model.score(X_test, y_test)
             
-            # Evaluate updated model
-            train_score = self.model.score(X_train_scaled, y_train)
-            test_score = self.model.score(X_test_scaled, y_test)
-            
-            # Store performance
             self.model_performance.append({
                 'version': self.model_version + 1,
                 'train_score': train_score,
@@ -312,7 +425,6 @@ class DynamicModelAnalyzer:
             print(f"Training Accuracy: {train_score:.3f}")
             print(f"Test Accuracy: {test_score:.3f}")
             
-            # Check improvement
             if len(self.model_performance) > 1:
                 prev_score = self.model_performance[-2]['test_score']
                 improvement = test_score - prev_score
@@ -323,7 +435,7 @@ class DynamicModelAnalyzer:
                 else:
                     print("➡️  Model accuracy stable")
             
-            return test_score > 0.6
+            return test_score > 0.55
             
         except Exception as e:
             print(f"Error in model update: {str(e)}")
@@ -498,15 +610,15 @@ class DynamicModelAnalyzer:
     
     def predict(self, features):
         """
-        Make prediction using the dynamic model
+        Make prediction using the dynamic model (pipeline handles scaling internally)
         """
         if self.model is None:
             return None, None
         
         try:
-            features_scaled = self.scaler.transform(features.reshape(1, -1))
-            prediction = self.model.predict(features_scaled)[0]
-            probability = self.model.predict_proba(features_scaled)[0][1]
+            input_data = features.reshape(1, -1) if features.ndim == 1 else features
+            prediction = self.model.predict(input_data)[0]
+            probability = self.model.predict_proba(input_data)[0][1]
             return prediction, probability
             
         except Exception as e:

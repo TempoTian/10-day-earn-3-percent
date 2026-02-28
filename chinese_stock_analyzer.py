@@ -11,7 +11,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, TimeSeriesSplit
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.pipeline import Pipeline
@@ -253,13 +253,66 @@ class ChineseStockAnalyzer:
             data['Support_20'] = data['low'].rolling(window=20).min()
             data['Resistance_20'] = data['high'].rolling(window=20).max()
             
-            # RSI
+            # RSI (multiple timeframes)
             data['RSI'] = self.calculate_rsi(data['close'])
+            data['RSI_7'] = self.calculate_rsi(data['close'], window=7)
+            data['RSI_21'] = self.calculate_rsi(data['close'], window=21)
             
             # MACD
             data['MACD'] = data['EMA_12'] - data['EMA_26']
             data['MACD_Signal'] = data['MACD'].ewm(span=9).mean()
             data['MACD_Histogram'] = data['MACD'] - data['MACD_Signal']
+            
+            # Normalized MACD (relative to price for cross-stock comparability)
+            data['MACD_Norm'] = data['MACD'] / data['close']
+            data['MACD_Signal_Norm'] = data['MACD_Signal'] / data['close']
+            data['MACD_Hist_Norm'] = data['MACD_Histogram'] / data['close']
+            
+            # ATR (Average True Range) for volatility
+            high_low = data['high'] - data['low']
+            high_close = abs(data['high'] - data['close'].shift(1))
+            low_close = abs(data['low'] - data['close'].shift(1))
+            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+            data['ATR'] = true_range.rolling(window=14).mean()
+            data['ATR_Ratio'] = data['ATR'] / data['close']
+            
+            # Stochastic Oscillator
+            low_14 = data['low'].rolling(window=14).min()
+            high_14 = data['high'].rolling(window=14).max()
+            data['Stoch_K'] = ((data['close'] - low_14) / (high_14 - low_14)) * 100
+            data['Stoch_D'] = data['Stoch_K'].rolling(window=3).mean()
+            
+            # ADX (Trend Strength)
+            plus_dm = data['high'].diff().clip(lower=0)
+            minus_dm = (-data['low'].diff()).clip(lower=0)
+            atr_14 = true_range.rolling(window=14).mean()
+            plus_di = 100 * (plus_dm.rolling(window=14).mean() / atr_14)
+            minus_di = 100 * (minus_dm.rolling(window=14).mean() / atr_14)
+            dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
+            data['ADX'] = dx.rolling(window=14).mean()
+            data['DI_Plus'] = plus_di
+            data['DI_Minus'] = minus_di
+            
+            # RSI slope (direction of RSI movement)
+            data['RSI_Slope'] = data['RSI'] - data['RSI'].shift(3)
+            
+            # OBV and its rate of change
+            obv = (np.sign(data['close'].diff()) * data['volume']).fillna(0).cumsum()
+            data['OBV_ROC_5'] = obv.pct_change(periods=5)
+            data['OBV_ROC_10'] = obv.pct_change(periods=10)
+            
+            # Volume-price divergence
+            data['Vol_Price_Divergence'] = (
+                data['close'].pct_change(5).fillna(0) * -1 +
+                data['volume'].pct_change(5).fillna(0)
+            )
+            
+            # Price acceleration
+            data['Price_Acceleration'] = data['Price_Momentum_5'] - data['Price_Momentum_5'].shift(5)
+            
+            # Candle body ratio
+            price_range = data['high'] - data['low']
+            data['Body_Ratio'] = (data['close'] - data['open']) / price_range.replace(0, np.nan)
             
             self.data = data
             print("Chinese market indicators calculated successfully!")
@@ -270,7 +323,7 @@ class ChineseStockAnalyzer:
             return False
     
     def create_ml_features(self):
-        """Create features for ML model"""
+        """Create expanded feature set for ML model using only normalized/relative features"""
         if self.data is None or len(self.data) < 50:
             return None
         
@@ -278,27 +331,50 @@ class ChineseStockAnalyzer:
             # Price vs moving averages
             self.data['Price_vs_SMA20'] = (self.data['close'] - self.data['SMA_20']) / self.data['SMA_20']
             self.data['Price_vs_SMA50'] = (self.data['close'] - self.data['SMA_50']) / self.data['SMA_50']
+            self.data['SMA_20_vs_50'] = (self.data['SMA_20'] - self.data['SMA_50']) / self.data['SMA_50']
             
             # Market regime features
-            self.data['Bull_Market'] = (self.data['close'] > self.data['SMA_20']) & (self.data['SMA_20'] > self.data['SMA_50']).astype(int)
-            self.data['Bear_Market'] = (self.data['close'] < self.data['SMA_20']) & (self.data['SMA_20'] < self.data['SMA_50']).astype(int)
+            self.data['Bull_Market'] = ((self.data['close'] > self.data['SMA_20']) & (self.data['SMA_20'] > self.data['SMA_50'])).astype(int)
+            self.data['Bear_Market'] = ((self.data['close'] < self.data['SMA_20']) & (self.data['SMA_20'] < self.data['SMA_50'])).astype(int)
             
-            # Feature list
+            # Core feature list (only normalized/relative features)
             features = [
-                'Price_Momentum_5', 'Price_Momentum_10', 'Price_Momentum_20', 'Price_Momentum_3',
-                'Volatility_10', 'Volatility_20', 'Volatility_50',
-                'Volume_Ratio', 'RSI', 'MACD', 'MACD_Signal', 'MACD_Histogram',
-                'BB_Position', 'Price_vs_SMA20', 'Price_vs_SMA50',
-                'Bull_Market', 'Bear_Market'
+                # Momentum (relative)
+                'Price_Momentum_3', 'Price_Momentum_5', 'Price_Momentum_10', 'Price_Momentum_20',
+                'Price_Acceleration',
+                # Volatility (relative)
+                'Volatility_10', 'Volatility_20', 'Volatility_50', 'ATR_Ratio',
+                # Volume (ratios)
+                'Volume_Ratio', 'OBV_ROC_5', 'OBV_ROC_10', 'Vol_Price_Divergence',
+                # RSI (already normalized 0-100)
+                'RSI', 'RSI_7', 'RSI_21', 'RSI_Slope',
+                # Normalized MACD
+                'MACD_Norm', 'MACD_Signal_Norm', 'MACD_Hist_Norm',
+                # Bollinger (position is 0-1)
+                'BB_Position',
+                # Stochastic (0-100)
+                'Stoch_K', 'Stoch_D',
+                # ADX (0-100)
+                'ADX', 'DI_Plus', 'DI_Minus',
+                # Price vs MA (relative)
+                'Price_vs_SMA20', 'Price_vs_SMA50', 'SMA_20_vs_50',
+                # Market regime
+                'Bull_Market', 'Bear_Market',
+                # Candle pattern
+                'Body_Ratio',
             ]
             
-            # Check if all features exist
+            # Only keep features that exist in the data
+            available_features = [f for f in features if f in self.data.columns]
             missing_features = [f for f in features if f not in self.data.columns]
             if missing_features:
-                print(f"❌ Missing features: {missing_features}")
+                print(f"⚠️  Skipping missing features: {missing_features}")
+            
+            if len(available_features) < 10:
+                print(f"❌ Too few features available: {len(available_features)}")
                 return None
             
-            return features
+            return available_features
             
         except Exception as e:
             print(f"Error creating ML features: {str(e)}")
@@ -420,8 +496,9 @@ class ChineseStockAnalyzer:
             train_score = self.model.score(X_train, y_train)
             test_score = self.model.score(X_test, y_test)
             
-            # Cross-validation score with stratified folds
-            cv_scores = cross_val_score(self.model, X_train, y_train, cv=5, scoring='accuracy')
+            # Time-series aware cross-validation
+            tscv = TimeSeriesSplit(n_splits=5)
+            cv_scores = cross_val_score(self.model, X_train, y_train, cv=tscv, scoring='accuracy')
             cv_mean = cv_scores.mean()
             cv_std = cv_scores.std()
             
@@ -466,31 +543,32 @@ class ChineseStockAnalyzer:
     
     def create_advanced_pipeline(self):
         """
-        Create advanced pipeline with feature selection and ensemble
+        Build an ensemble pipeline: RobustScaler -> SelectKBest -> VotingClassifier.
+        Tuned for Chinese market characteristics (higher volatility, class imbalance).
         """
-        # Feature selection step
-        feature_selector = SelectKBest(score_func=f_classif, k=15)  # Select top 15 features
+        n_features = len([c for c in self.data.columns]) if self.data is not None else 30
+        k = min(20, n_features)
+        feature_selector = SelectKBest(score_func=f_classif, k=k)
         
-        # Create base models
         rf = RandomForestClassifier(
-            n_estimators=150,
-            max_depth=6,
+            n_estimators=200,
+            max_depth=5,
             min_samples_split=25,
-            min_samples_leaf=15,
+            min_samples_leaf=12,
             max_features='sqrt',
             class_weight='balanced',
             random_state=42,
-            n_jobs=-1
+            n_jobs=-1,
         )
         
         gb = GradientBoostingClassifier(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=4,
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=3,
             min_samples_split=30,
             min_samples_leaf=15,
             subsample=0.8,
-            random_state=42
+            random_state=42,
         )
         
         lr = LogisticRegression(
@@ -499,25 +577,19 @@ class ChineseStockAnalyzer:
             solver='liblinear',
             class_weight='balanced',
             random_state=42,
-            max_iter=1000
+            max_iter=1000,
         )
         
-        # Create ensemble
         ensemble = VotingClassifier(
-            estimators=[
-                ('rf', rf),
-                ('gb', gb),
-                ('lr', lr)
-            ],
+            estimators=[('rf', rf), ('gb', gb), ('lr', lr)],
             voting='soft',
-            weights=[0.5, 0.3, 0.2]
+            weights=[0.45, 0.35, 0.20],
         )
         
-        # Create pipeline
         pipeline = Pipeline([
             ('scaler', RobustScaler()),
             ('feature_selector', feature_selector),
-            ('ensemble', ensemble)
+            ('ensemble', ensemble),
         ])
         
         return pipeline
@@ -890,11 +962,11 @@ class ChineseStockAnalyzer:
             recommendation = "HOLD"
             confidence = "Low"
         
-        # Calculate price estimates
-        estimated_high_10d = current_price * 1.08  # 8% potential gain
-        estimated_low_10d = current_price * 0.98   # 2% potential loss
-        potential_gain_10d = 0.08
-        potential_loss_10d = -0.02
+        # Data-driven price estimates (no longer hardcoded)
+        estimated_high_10d = self.estimate_highest_price_10_days(symbol, current_price, market)
+        estimated_low_10d = self.estimate_lowest_price_10_days(symbol, current_price, market)
+        potential_gain_10d = (estimated_high_10d - current_price) / current_price
+        potential_loss_10d = (estimated_low_10d - current_price) / current_price
         
         # Calculate confidence for price estimates
         high_confidence, high_reasoning = self.calculate_ml_price_confidence(estimated_high_10d, current_price, 'high')
